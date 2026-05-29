@@ -15,7 +15,7 @@ from src.ui.styles import PREMIUM_CSS
 from src.services.bert import BERTClassifierService
 from src.services.translation import TranslationService
 from src.services.vision import GroqVisionService
-from src.ui.tabs import text_tab, image_tab, batch_tab
+from src.ui.tabs import text_tab, image_tab, batch_tab, clinical_tab
 
 logging.basicConfig(level=logging.WARNING)
 logger = logging.getLogger("MindScan")
@@ -142,10 +142,13 @@ if is_multilingual:
 st.divider()
 
 # ── Main Tabs ──
-tab1, tab2, tab3 = st.tabs([S["tab_text"], S["tab_image"], S["tab_batch"]])
+tab1, tab_clin, tab2, tab3 = st.tabs([S["tab_text"], S.get("tab_clinical", "📋 Clinical Screeners"), S["tab_image"], S["tab_batch"]])
 
 with tab1:
     text_tab.render(S, lang, is_multilingual, translator_svc, bert_svc)
+
+with tab_clin:
+    clinical_tab.render(S, lang)
 
 with tab2:
     image_tab.render(S, lang, vision_svc)
