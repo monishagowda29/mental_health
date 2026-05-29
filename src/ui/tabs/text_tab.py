@@ -12,7 +12,7 @@ from src.services.bert import BERTClassifierService
 from src.services.history_manager import HistoryManager
 
 
-LABELS = ["anxiety", "depression", "normal"]
+LABELS = ["depression", "normal", "anxiety"]
 
 ICONS_MAP = {
     "normal":     ("✅", "NO SIGNIFICANT RISK INDICATORS DETECTED", "result-normal",     "#34d399"),

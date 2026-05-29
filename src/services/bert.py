@@ -19,7 +19,7 @@ warnings.filterwarnings("ignore", category=UserWarning, module="transformers")
 
 logger = logging.getLogger(__name__)
 
-LABELS: list[str] = ["anxiety", "depression", "normal"]
+LABELS: list[str] = ["depression", "normal", "anxiety"]
 MAX_BERT_WORDS: int = 350  # Warn user if input exceeds this (BERT hard-truncates at 512 tokens)
 
 
@@ -121,6 +121,35 @@ class BERTClassifierService:
                 "BERT model is not loaded. Call BERTClassifierService().load() first."
             )
 
+        cleaned = text.lower().strip()
+
+        # Wellness vs Clinical lexicon calibration
+        WELLNESS_WORDS = {
+            "good", "great", "happy", "nice", "excellent", "wonderful", "beautiful", "calm",
+            "peaceful", "perfect", "amazing", "content", "cheerful", "joy", "fine", "healthy",
+            "doing well", "feeling good", "doing good", "feeling nice", "glad", "blessed"
+        }
+
+        CLINICAL_KEYWORDS = {
+            "anxious", "anxiety", "worry", "worried", "panic", "panicked", "fear", "scared",
+            "depressed", "depression", "sad", "sadness", "empty", "hopeless", "hopelessness",
+            "suicide", "suicidal", "kill", "die", "death", "hurt", "pain", "cutting", "harm",
+            "lonely", "darkness", "dark", "cry", "crying", "hate", "scary", "shake", "shaking",
+            "stress", "stressed", "bipolar", "mental health", "struggle", "struggling"
+        }
+
+        # Check if text contains wellness words and ZERO clinical keywords
+        has_wellness = any(w in cleaned for w in WELLNESS_WORDS)
+        has_clinical = any(c in cleaned for c in CLINICAL_KEYWORDS)
+
+        if has_wellness and not has_clinical:
+            # Calibrate / Override to 'normal' with 90% confidence
+            # LABELS is ["depression", "normal", "anxiety"]
+            probs = np.array([0.05, 0.90, 0.05], dtype=np.float32)
+            label = "normal"
+            logger.debug("BERT prediction (lexicon override): %s (probs=%s)", label, probs.tolist())
+            return label, probs
+
         word_count = len(text.split())
         if word_count > MAX_BERT_WORDS:
             logger.warning(
@@ -141,7 +170,7 @@ class BERTClassifierService:
                     input_ids=enc["input_ids"].to(self._device),
                     attention_mask=enc["attention_mask"].to(self._device),
                 ).logits
-            probs: np.ndarray = torch.softmax(logits, dim=1).cpu().numpy()[0]
+            probs = torch.softmax(logits, dim=1).cpu().numpy()[0]
             label = LABELS[int(np.argmax(probs))]
             logger.debug("BERT prediction: %s (probs=%s)", label, probs.tolist())
             return label, probs
