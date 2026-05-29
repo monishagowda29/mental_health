@@ -260,24 +260,81 @@ def _render_history(S: dict, patient_name: str) -> None:
     c3.metric("🟡 Anxiety Patterns", f"{(anx_count/total)*100:.0f}%")
     c4.metric("🔴 Depressive Patterns", f"{(dep_count/total)*100:.0f}%")
 
-    # Draw Wellbeing Trend Line Chart
+    # Draw Wellbeing Trend Line Chart using premium Matplotlib & Seaborn
     st.markdown("**Linguistic Risk Severity Trend (Last 10 Checks)**")
-    st.caption("0 = Low Risk · 1 = Anxiety Patterns · 2 = Depressive Patterns")
     
     chart_data = []
     # Reverse to show chronological order left-to-right
     for r in reversed(records[:10]):
         score = 2 if r["label"] == "depression" else 1 if r["label"] == "anxiety" else 0
         try:
-            # Parse ISO timestamp and format for the x-axis
-            dt = datetime.fromisoformat(r["timestamp"]).strftime("%m/%d %H:%M")
+            dt = datetime.fromisoformat(r["timestamp"]).strftime("%m/%d\n%H:%M")
         except Exception:
             dt = "Unknown"
         chart_data.append({"Time": dt, "Risk Severity": score})
     
     df = pd.DataFrame(chart_data)
     if not df.empty:
-        st.line_chart(df.set_index("Time"), use_container_width=True)
+        import matplotlib.pyplot as plt
+        import seaborn as sns
+        
+        # Style setup for dark mode matching PREMIUM_CSS
+        plt.style.use('dark_background')
+        fig, ax = plt.subplots(figsize=(10, 4))
+        
+        # Clear color maps
+        # Normal (0) -> Green, Anxiety (1) -> Orange/Amber, Depression (2) -> Crimson
+        severity_colors = {0: "#10b981", 1: "#fbbf24", 2: "#f43f5e"}
+        
+        # Plot continuous connect line with premium indigo/violet gradient theme
+        sns.lineplot(
+            data=df,
+            x="Time",
+            y="Risk Severity",
+            color="rgba(139, 92, 246, 0.45)", # Soft purple connection line
+            linewidth=3,
+            ax=ax,
+            marker="",
+            legend=False
+        )
+        
+        # Plot custom colored node markers at each check-point
+        for i, row in df.iterrows():
+            val = row["Risk Severity"]
+            col = severity_colors.get(val, "#8b5cf6")
+            ax.plot(
+                row["Time"],
+                val,
+                marker="o",
+                color=col,
+                markersize=9,
+                markeredgecolor='#060810',
+                markeredgewidth=2.2,
+                zorder=5
+            )
+            
+        # Customize y-ticks to match categorical severity
+        ax.set_ylim(-0.4, 2.4)
+        ax.set_yticks([0, 1, 2])
+        ax.set_yticklabels(["🟢 Low Risk", "🟡 Anxiety", "🔴 Depressive"], fontsize=8.5, fontweight='bold', color="#d1d5db")
+        
+        # Custom grid line styling
+        ax.grid(True, linestyle="--", alpha=0.08, color="#ffffff")
+        
+        # Spines / Borders styling
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+        ax.spines['left'].set_color("rgba(255,255,255,0.06)")
+        ax.spines['bottom'].set_color("rgba(255,255,255,0.06)")
+        
+        # Labeling styling
+        ax.set_xlabel("", fontsize=8)
+        ax.set_ylabel("", fontsize=8)
+        ax.tick_params(colors="#9ca3af", labelsize=8.5)
+        
+        plt.tight_layout()
+        st.pyplot(fig)
+        plt.close(fig) # Avoid memory leakage
 
     # Scoped Action controls
     col_x, col_y = st.columns(2)
