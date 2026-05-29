@@ -325,8 +325,8 @@ def _render_history(S: dict, patient_name: str) -> None:
         # Spines / Borders styling
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)
-        ax.spines['left'].set_color("rgba(255,255,255,0.06)")
-        ax.spines['bottom'].set_color("rgba(255,255,255,0.06)")
+        ax.spines['left'].set_color("#333333")
+        ax.spines['bottom'].set_color("#333333")
         
         # Labeling styling
         ax.set_xlabel("", fontsize=8)
