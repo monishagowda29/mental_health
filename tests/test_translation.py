@@ -65,7 +65,7 @@ class TestTranslationService(unittest.TestCase):
         with self.assertRaises(RuntimeError) as context:
             self.translator.translate("ನಮಸ್ಕಾರ")
         
-        self.assertIn("Offline translation pipeline execution failed", str(context.exception))
+        self.assertIn("Offline translation failed", str(context.exception))
 
 if __name__ == "__main__":
     unittest.main()

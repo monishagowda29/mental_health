@@ -14,16 +14,70 @@ from src.services.bert import BERTClassifierService
 LABELS = ["anxiety", "depression", "normal"]
 
 ICONS_MAP = {
-    "normal":     ("✅", "NORMAL",          "result-normal",     "#34d399"),
-    "anxiety":    ("⚠️", "ANXIETY RISK",    "result-anxiety",    "#fbbf24"),
-    "depression": ("🔴", "DEPRESSION RISK", "result-depression", "#f87171"),
+    "normal":     ("✅", "NO SIGNIFICANT RISK INDICATORS DETECTED", "result-normal",     "#34d399"),
+    "anxiety":    ("⚠️", "ANXIETY PATTERNS DETECTED",               "result-anxiety",    "#fbbf24"),
+    "depression": ("🧠", "DEPRESSIVE PATTERNS DETECTED",            "result-depression", "#f87171"),
 }
 
 CONF_ICONS = {
     "anxiety":    ("⚠️", "#fbbf24", "linear-gradient(90deg, #f59e0b, #d97706)"),
-    "depression": ("🔴", "#f87171", "linear-gradient(90deg, #ef4444, #b91c1c)"),
+    "depression": ("🧠", "#f87171", "linear-gradient(90deg, #ef4444, #b91c1c)"),
     "normal":     ("✅", "#34d399", "linear-gradient(90deg, #10b981, #059669)"),
 }
+
+CRISIS_KEYWORDS = [
+    "suicide", "kill myself", "want to die", "end my life", "ending it all", 
+    "self harm", "commit suicide", "no reason to live", "better off dead", 
+    "want to end it", "cutting myself", "overdose", "hopelessness", "hanging myself",
+    "atmahatya", "mar jana"
+]
+
+def detect_language_from_text(text: str) -> str | None:
+    """Detects Indian languages based on Unicode script blocks.
+    Returns the language code ('kn', 'hi', 'ta', 'te', 'ml', 'bn', 'mr') or None if English.
+    """
+    for char in text:
+        val = ord(char)
+        # Devanagari (Hindi / Marathi): U+0900 - U+097F
+        if 0x0900 <= val <= 0x097F:
+            return "mr" if st.session_state.get("ui_lang") == "mr" else "hi"
+        # Bengali: U+0980 - U+09FF
+        elif 0x0980 <= val <= 0x09FF:
+            return "bn"
+        # Tamil: U+0B80 - U+0BFF
+        elif 0x0B80 <= val <= 0x0BFF:
+            return "ta"
+        # Telugu: U+0C00 - U+0C7F
+        elif 0x0C00 <= val <= 0x0C7F:
+            return "te"
+        # Kannada: U+0C80 - U+0CFF
+        elif 0x0C80 <= val <= 0x0CFF:
+            return "kn"
+        # Malayalam: U+0D00 - U+0D7F
+        elif 0x0D00 <= val <= 0x0D7F:
+            return "ml"
+    return "en"
+
+def _render_crisis_card() -> None:
+    st.markdown("""
+<div class="crisis-card">
+    <div class="crisis-header">
+        <span style="font-size:1.8rem;">🚨</span>
+        <h3 class="crisis-title">Please Know That You Are Not Alone</h3>
+    </div>
+    <p class="crisis-desc">
+        It sounds like you might be going through a very difficult time. If you or someone you know is struggling 
+        with thoughts of self-harm or suicide, please reach out for help immediately. Compassionate, professional, 
+        and confidential support is available 24/7.
+    </p>
+    <div class="crisis-btn-container">
+        <a href="tel:988" class="crisis-btn" target="_blank">📞 Call 988 (India / US Helpline)</a>
+        <a href="https://www.aasra.info" class="crisis-btn-sec" target="_blank">🌐 AASRA Helpline (24x7)</a>
+        <a href="https://www.vandrevalafoundation.com" class="crisis-btn-sec" target="_blank">🌐 Vandrevala Foundation</a>
+        <a href="https://findahelpline.com" class="crisis-btn-sec" target="_blank">🌍 International Crisis Contacts</a>
+    </div>
+</div>
+""", unsafe_allow_html=True)
 
 
 def render(S: dict, lang: str, is_multilingual: bool,
@@ -50,6 +104,13 @@ def render(S: dict, lang: str, is_multilingual: bool,
         if not raw:
             st.warning("⚠️ Please enter some text to analyze." if lang == "en" else S["input_label"])
             return
+
+        # ── Script Auto-Detection ──
+        detected_lang = detect_language_from_text(raw)
+        if detected_lang and detected_lang != st.session_state.ui_lang:
+            st.session_state.ui_lang = detected_lang
+            st.toast(f"🌐 Optimizing translation for native input...", icon="🔄")
+            st.rerun()
 
         # ── Input length guard ──
         word_count = len(raw.split())
@@ -79,6 +140,9 @@ def render(S: dict, lang: str, is_multilingual: bool,
                     st.error(S["err_translation"].format(error=str(exc)))
                     return
 
+        # ── Crisis Keyword Scanning ──
+        has_crisis_keyword = any(kw in raw.lower() or kw in text_to_analyze.lower() for kw in CRISIS_KEYWORDS)
+
         # ── BERT Inference ──
         with st.spinner(S["spinner_bert"]):
             try:
@@ -87,7 +151,10 @@ def render(S: dict, lang: str, is_multilingual: bool,
                 st.error(f"❌ BERT inference failed: {exc}")
                 return
 
-        _render_result(S, lang, raw, label_pred, probs)
+        # Trigger crisis card if high-risk keywords OR depression probability >= 80%
+        is_crisis = has_crisis_keyword or (label_pred == "depression" and probs[1] >= 0.80)
+
+        _render_result(S, lang, raw, label_pred, probs, is_crisis=is_crisis)
 
         # ── Session History ──
         if "result_history" not in st.session_state:
@@ -107,8 +174,11 @@ def render(S: dict, lang: str, is_multilingual: bool,
 
 # ──────────────────────────────────────────────────────────────────────────────
 
-def _render_result(S: dict, lang: str, raw: str, label_pred: str, probs) -> None:
+def _render_result(S: dict, lang: str, raw: str, label_pred: str, probs, is_crisis: bool = False) -> None:
     st.divider()
+    if is_crisis:
+        _render_crisis_card()
+        
     st.markdown(f"#### {S['result_title']}")
 
     advice_map = {

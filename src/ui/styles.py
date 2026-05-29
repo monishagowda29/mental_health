@@ -325,5 +325,122 @@ div[data-testid="stRadio"] label {
 div[data-testid="stRadio"] label:hover {
     background: rgba(139,92,246,0.15) !important; border-color: rgba(139,92,246,0.4) !important; color: #c4b5fd !important;
 }
+
+/* ── Premium Crisis Card ── */
+.crisis-card {
+    background: linear-gradient(135deg, rgba(244,63,94,0.18) 0%, rgba(225,29,72,0.12) 50%, rgba(159,18,57,0.08) 100%) !important;
+    border: 1px solid rgba(244,63,94,0.4) !important;
+    border-radius: 16px !important;
+    padding: 1.5rem 1.8rem !important;
+    margin: 1.5rem 0 !important;
+    backdrop-filter: blur(25px) !important;
+    box-shadow: 0 10px 40px rgba(244,63,94,0.15), inset 0 1px 0 rgba(255,255,255,0.1) !important;
+    animation: pulseGlow 3s infinite alternate, resultFade 0.5s ease-out !important;
+}
+@keyframes pulseGlow {
+    0%   { border-color: rgba(244,63,94,0.4); box-shadow: 0 10px 40px rgba(244,63,94,0.15); }
+    100% { border-color: rgba(244,63,94,0.7); box-shadow: 0 10px 40px rgba(244,63,94,0.3); }
+}
+.crisis-header {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    margin-bottom: 0.8rem;
+}
+.crisis-title {
+    font-family: 'Outfit', sans-serif !important;
+    font-size: 1.4rem !important;
+    font-weight: 800 !important;
+    color: #fda4af !important;
+    margin: 0 !important;
+}
+.crisis-desc {
+    color: #fecdd3 !important;
+    font-size: 0.9rem !important;
+    line-height: 1.6 !important;
+    margin-bottom: 1.2rem !important;
+}
+.crisis-btn-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.8rem;
+}
+.crisis-btn {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 0.5rem !important;
+    background: linear-gradient(135deg, #e11d48 0%, #be123c 100%) !important;
+    color: white !important;
+    border: none !important;
+    padding: 0.6rem 1.2rem !important;
+    font-size: 0.85rem !important;
+    font-weight: 700 !important;
+    border-radius: 50px !important;
+    text-decoration: none !important;
+    box-shadow: 0 4px 15px rgba(225,29,72,0.4) !important;
+    transition: all 0.25s ease !important;
+    cursor: pointer !important;
+}
+.crisis-btn:hover {
+    transform: translateY(-2px) scale(1.03) !important;
+    box-shadow: 0 6px 20px rgba(225,29,72,0.6) !important;
+    background: linear-gradient(135deg, #f43f5e 0%, #e11d48 100%) !important;
+}
+.crisis-btn-sec {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 0.5rem !important;
+    background: rgba(255,255,255,0.08) !important;
+    border: 1px solid rgba(255,255,255,0.15) !important;
+    color: #fecdd3 !important;
+    padding: 0.6rem 1.2rem !important;
+    font-size: 0.85rem !important;
+    font-weight: 700 !important;
+    border-radius: 50px !important;
+    text-decoration: none !important;
+    transition: all 0.25s ease !important;
+    cursor: pointer !important;
+}
+.crisis-btn-sec:hover {
+    background: rgba(255,255,255,0.15) !important;
+    border-color: rgba(255,255,255,0.3) !important;
+    color: white !important;
+    transform: translateY(-2px) !important;
+}
+
+/* ── Science Metrics Card ── */
+.science-card {
+    background: rgba(10, 11, 20, 0.85) !important;
+    border: 1px solid rgba(255,255,255,0.06) !important;
+    border-radius: 16px !important;
+    padding: 1.6rem !important;
+    margin: 1.5rem 0 !important;
+}
+.science-metric-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+    gap: 0.8rem;
+    margin: 1.2rem 0;
+}
+.science-metric-item {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.05);
+    border-radius: 12px;
+    padding: 0.8rem;
+    text-align: center;
+}
+.science-metric-val {
+    font-family: 'Outfit', sans-serif !important;
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: #c084fc;
+}
+.science-metric-lbl {
+    font-size: 0.72rem;
+    color: #9ca3af;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-top: 0.2rem;
+}
 </style>
 """

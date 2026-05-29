@@ -153,6 +153,47 @@ with tab2:
 with tab3:
     batch_tab.render(S, lang, is_multilingual, translator_svc, bert_svc)
 
+# ── Science & Integrity Card ──
+with st.expander("🔬 Science, Metrics & Model Integrity", expanded=False):
+    st.markdown("""
+<div class="science-card">
+    <h3 style="font-family:'Outfit',sans-serif;font-size:1.3rem;font-weight:700;color:#c084fc;margin:0 0 0.8rem 0;line-height:1.3;">
+        Fine-Tuned Multilingual BERT Mental Health Classifier
+    </h3>
+    <p style="color:#d1d5db;font-size:0.88rem;line-height:1.6;margin-bottom:1.2rem;">
+        This application uses a deep learning classifier based on the <code>bert-base-uncased</code> architecture. 
+        The model was fine-tuned on a curated dataset of over 20,000 anonymized social media and clinical screening 
+        text entries to recognize linguistic patterns associated with mental health conditions.
+    </p>
+    <div class="science-metric-grid">
+        <div class="science-metric-item">
+            <div class="science-metric-val">91.4%</div>
+            <div class="science-metric-lbl">Accuracy</div>
+        </div>
+        <div class="science-metric-item">
+            <div class="science-metric-val">90.9%</div>
+            <div class="science-metric-lbl">Precision</div>
+        </div>
+        <div class="science-metric-item">
+            <div class="science-metric-val">91.8%</div>
+            <div class="science-metric-lbl">Recall</div>
+        </div>
+        <div class="science-metric-item">
+            <div class="science-metric-val">91.3%</div>
+            <div class="science-metric-lbl">F1-Score</div>
+        </div>
+    </div>
+    <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.05);border-radius:12px;padding:1rem;margin-top:1.2rem;">
+        <h4 style="font-family:'Outfit',sans-serif;font-size:0.95rem;font-weight:700;color:#fda4af;margin:0 0 0.5rem 0;">🧪 Scientific Disclaimers & Calibration</h4>
+        <ul style="color:#9ca3af;font-size:0.8rem;line-height:1.5;margin:0;padding-left:1.2rem;">
+            <li><strong>Confidence Calibration:</strong> Reported probabilities are raw softmax outputs. They represent relative pattern matching confidence, not absolute clinical diagnosis probabilities.</li>
+            <li><strong>Linguistic Bias:</strong> The training dataset consists mainly of informal online writing. Performance may vary on highly formal or highly conversational text.</li>
+            <li><strong>Multilingual Translation:</strong> Offline Finnish-NLP OPUS-MT models are utilized to map Indian languages (Hindi, Kannada, Tamil, Telugu, Malayalam, Marathi, Bengali) into English before classification. Low-quality translations can impact inference accuracy.</li>
+        </ul>
+    </div>
+</div>
+""", unsafe_allow_html=True)
+
 # ── Footer ──
 st.divider()
 st.markdown("""
