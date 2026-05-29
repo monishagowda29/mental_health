@@ -1,6 +1,7 @@
 import unittest
 from unittest.mock import MagicMock, patch
 import threading
+import torch
 from src.services.translation import TranslationService
 
 class TestTranslationService(unittest.TestCase):
@@ -38,12 +39,22 @@ class TestTranslationService(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.translator.translate(123) # type: ignore
 
-    @patch("src.services.translation.pipeline")
-    def test_lazy_loading_and_caching(self, mock_pipeline):
-        """Verify that the HF pipeline is loaded only once and cached."""
-        mock_pipe_instance = MagicMock()
-        mock_pipeline.return_value = mock_pipe_instance
-        mock_pipe_instance.return_value = [{"translation_text": "Hello"}]
+    @patch("src.services.translation.AutoTokenizer.from_pretrained")
+    @patch("src.services.translation.AutoModelForSeq2SeqLM.from_pretrained")
+    def test_lazy_loading_and_caching(self, mock_model_class, mock_tokenizer_class):
+        """Verify that the HF Seq2Seq model is loaded only once and cached."""
+        mock_tokenizer = MagicMock()
+        mock_tokenizer_class.return_value = mock_tokenizer
+        mock_tokenizer.return_value = {
+            "input_ids": torch.tensor([[1, 2]]),
+            "attention_mask": torch.tensor([[1, 1]])
+        }
+        mock_tokenizer.batch_decode.return_value = ["Hello"]
+
+        mock_model = MagicMock()
+        mock_model.to.return_value = mock_model
+        mock_model.generate.return_value = torch.tensor([[1, 2]])
+        mock_model_class.return_value = mock_model
 
         # Call translate twice
         res1 = self.translator.translate("ನಮಸ್ಕಾರ")
@@ -52,15 +63,25 @@ class TestTranslationService(unittest.TestCase):
         self.assertEqual(res1, "Hello")
         self.assertEqual(res2, "Hello")
         
-        # Verify HF pipeline initialization was only called once
-        mock_pipeline.assert_called_once()
+        # Verify HF model and tokenizer initializations were only called once
+        mock_model_class.assert_called_once()
+        mock_tokenizer_class.assert_called_once()
 
-    @patch("src.services.translation.pipeline")
-    def test_translation_execution_failure_propagation(self, mock_pipeline):
-        """Verify that pipeline execution errors are propagated as RuntimeErrors."""
-        mock_pipe_instance = MagicMock()
-        mock_pipeline.return_value = mock_pipe_instance
-        mock_pipe_instance.side_effect = Exception("HF pipeline internal crash")
+    @patch("src.services.translation.AutoTokenizer.from_pretrained")
+    @patch("src.services.translation.AutoModelForSeq2SeqLM.from_pretrained")
+    def test_translation_execution_failure_propagation(self, mock_model_class, mock_tokenizer_class):
+        """Verify that translation generation execution errors are propagated as RuntimeErrors."""
+        mock_tokenizer = MagicMock()
+        mock_tokenizer_class.return_value = mock_tokenizer
+        mock_tokenizer.return_value = {
+            "input_ids": torch.tensor([[1, 2]]),
+            "attention_mask": torch.tensor([[1, 1]])
+        }
+
+        mock_model = MagicMock()
+        mock_model.to.return_value = mock_model
+        mock_model.generate.side_effect = Exception("Seq2Seq generation crash")
+        mock_model_class.return_value = mock_model
 
         with self.assertRaises(RuntimeError) as context:
             self.translator.translate("ನಮಸ್ಕಾರ")

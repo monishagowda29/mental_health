@@ -11,7 +11,7 @@ import threading
 from functools import lru_cache
 from typing import Dict, Optional
 
-from transformers import pipeline
+from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
 
 from src.config import Config
 
@@ -36,7 +36,7 @@ LANG_PREFIXES: Dict[str, str] = {
 
 class TranslationService:
     """
-    Offline local translation service using HuggingFace pipelines.
+    Offline local translation service using HuggingFace AutoModels.
     Designed for thread-safe, cached execution to preserve data privacy.
 
     Supports major Indian languages by mapping them to English using
@@ -49,10 +49,10 @@ class TranslationService:
         "ta": "Tamil (தமிழ்)",
         "te": "Telugu (తెలుగు)",
         "ml": "Malayalam (മലയാളം)",
-        "mr": "Marathi (मराठी)",
+        "mr": "Marathi (มరాಠಿ)",
         "bn": "Bengali (বাংলা)",
         "gu": "Gujarati (ગુજરાતી)",
-        "pa": "Punjabi (ਪੰਜਾਬੀ)",
+        "pa": "Punjabi (ਪੰਜਾਬಿ)",
         "ur": "Urdu (اردو)",
         "or": "Odia (ଓଡ଼ିଆ)",
     }
@@ -73,7 +73,8 @@ class TranslationService:
         """Initializes class variables exactly once."""
         if getattr(self, "_initialized", False):
             return
-        self._pipeline = None
+        self._tokenizer = None
+        self._model = None
         self._init_lock = threading.Lock()
         self._initialized = True
         logger.debug("TranslationService singleton instance created.")
@@ -83,36 +84,35 @@ class TranslationService:
         """Returns a copy of the supported Indian languages dictionary."""
         return cls.SUPPORTED_LANGUAGES.copy()
 
-    def _get_pipeline(self):
+    def _load_model(self):
         """
-        Lazy-loads the translation pipeline in a thread-safe manner.
-        Caches the pipeline internally so it is not re-initialized on subsequent calls.
+        Lazy-loads the translation model and tokenizer in a thread-safe manner.
+        Caches them internally so they are not re-initialized on subsequent calls.
         """
-        if self._pipeline is None:
+        if self._model is None or self._tokenizer is None:
             with self._init_lock:
-                if self._pipeline is None:
+                if self._model is None or self._tokenizer is None:
                     model_name = getattr(
                         Config, "HF_TRANSLATION_MODEL", "Helsinki-NLP/opus-mt-mul-en"
                     )
-                    logger.info("Initializing translation pipeline: %s ...", model_name)
+                    logger.info("Initializing translation model: %s ...", model_name)
                     try:
-                        device = 0 if Config.DEVICE == "cuda" else -1
-                        self._pipeline = pipeline(
-                            task="translation",
-                            model=model_name,
-                            device=device,
-                        )
+                        logger.info("Loading tokenizer for %s ...", model_name)
+                        self._tokenizer = AutoTokenizer.from_pretrained(model_name)
+                        logger.info("Loading model for %s ...", model_name)
+                        self._model = AutoModelForSeq2SeqLM.from_pretrained(model_name).to(Config.DEVICE)
                         logger.info(
-                            "Translation pipeline ready on device: %s", Config.DEVICE
+                            "Translation model ready on device: %s", Config.DEVICE
                         )
                     except Exception as exc:
                         logger.error(
-                            "Failed to init translation pipeline: %s", exc, exc_info=True
+                            "Failed to init translation model: %s", exc, exc_info=True
                         )
+                        self._tokenizer = None
+                        self._model = None
                         raise RuntimeError(
-                            f"Translation pipeline initialization failed: {exc}"
+                            f"Translation model initialization failed: {exc}"
                         ) from exc
-        return self._pipeline
 
     # ------------------------------------------------------------------
     # Public API
@@ -154,20 +154,23 @@ class TranslationService:
     def _cached_translate(self, prefixed_text: str) -> str:
         """
         LRU-cached translation. Caches up to 512 unique inputs.
-        The cache key is the prefixed text string, so different language
-        prefixes for the same raw text are cached separately.
+        The cache key is the prefixed text string.
         """
         try:
-            translator = self._get_pipeline()
+            self._load_model()
             logger.info(
                 "Translating text (length: %d chars) ...", len(prefixed_text)
             )
-            result = translator(prefixed_text)
-
-            if not result or "translation_text" not in result[0]:
-                raise RuntimeError("Pipeline returned an invalid result payload.")
-
-            translated = result[0]["translation_text"]
+            
+            # Direct model inference bypassing the legacy pipeline wrapper
+            inputs = self._tokenizer(prefixed_text, return_tensors="pt", padding=True, truncation=True)
+            inputs = {k: v.to(Config.DEVICE) for k, v in inputs.items()}
+            
+            import torch
+            with torch.no_grad():
+                generated_tokens = self._model.generate(**inputs)
+                
+            translated = self._tokenizer.batch_decode(generated_tokens, skip_special_tokens=True)[0]
             logger.info("Translation done. Output length: %d chars.", len(translated))
             return translated
 
