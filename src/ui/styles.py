@@ -49,7 +49,8 @@ html, body, .stMarkdown, p, label, input, button, select, textarea {
 }
 
 /* ── Hide Streamlit chrome ── */
-#MainMenu, footer, header { visibility: hidden !important; }
+#MainMenu, footer { visibility: hidden !important; }
+header { background: transparent !important; }
 .block-container { padding-top: 2rem !important; max-width: 1200px; }
 
 /* ── Hero ── */
