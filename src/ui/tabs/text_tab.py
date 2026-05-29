@@ -291,7 +291,8 @@ def _render_history(S: dict, patient_name: str) -> None:
             data=df,
             x="Time",
             y="Risk Severity",
-            color="rgba(139, 92, 246, 0.45)", # Soft purple connection line
+            color="#8b5cf6", # Soft purple connection line
+            alpha=0.45,
             linewidth=3,
             ax=ax,
             marker="",
