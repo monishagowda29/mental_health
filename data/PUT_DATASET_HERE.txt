@@ -1,0 +1,5 @@
+# Place your downloaded Kaggle CSV here
+# Rename it to: reddit_mental_health.csv
+# 
+# Download from:
+# https://www.kaggle.com/datasets/neelghoshal/reddit-mental-health-data

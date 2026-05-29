@@ -37,7 +37,12 @@ from sklearn.metrics import (
 )
 from sklearn.preprocessing import LabelEncoder
 import warnings
-warnings.filterwarnings("ignore")
+# Suppress only known noisy warnings — not everything
+warnings.filterwarnings("ignore", category=UserWarning, module="transformers")
+warnings.filterwarnings("ignore", category=FutureWarning, module="sklearn")
+warnings.filterwarnings("ignore", category=UserWarning, module="torch")
+
+from src.config import Config
 
 # ─────────────────────────────────────────────
 # 0. REPRODUCIBILITY
@@ -63,9 +68,10 @@ CFG = {
     "warmup_ratio"  : 0.1,
     "weight_decay"  : 0.01,
     "num_classes"   : 3,
-    "data_path"     : "data/reddit_mental_health.csv",   # after Kaggle download
+    # Paths from Config — respect MODEL_DIR env var if set
+    "data_path"     : os.environ.get("DATA_PATH", "data/reddit_mental_health.csv"),
     "output_dir"    : "outputs/",
-    "model_dir"     : "models/bert_mental_health/",
+    "model_dir"     : Config.MODEL_DIR,
     "label_col"     : "label",   # column name in dataset
     "text_col"      : "text",    # column name in dataset
 }

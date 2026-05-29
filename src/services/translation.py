@@ -1,46 +1,71 @@
+"""
+src/services/translation.py
+Offline translation service using Helsinki-NLP/opus-mt-mul-en.
+Improvements over v1:
+  - Language-code prefixes for better accuracy on short texts (>>kn<<, >>hi<<, etc.)
+  - LRU cache for repeated translations (up to 512 entries)
+  - Thread-safe singleton with lazy-loading pipeline
+"""
 import logging
 import threading
-from typing import Dict, List, Optional, Union
+from functools import lru_cache
+from typing import Dict, Optional
+
 from transformers import pipeline
+
 from src.config import Config
 
-# Configure logging for the translation service module
 logger = logging.getLogger(__name__)
+
+# Helsinki-NLP opus-mt-mul-en source-language prefixes.
+# Prepending these significantly improves accuracy on short texts.
+LANG_PREFIXES: Dict[str, str] = {
+    "kn": ">>kn<< ",
+    "hi": ">>hi<< ",
+    "ta": ">>ta<< ",
+    "te": ">>te<< ",
+    "ml": ">>ml<< ",
+    "mr": ">>mr<< ",
+    "bn": ">>bn<< ",
+    "gu": ">>gu<< ",
+    "pa": ">>pa<< ",
+    "ur": ">>ur<< ",
+    "or": ">>or<< ",
+}
+
 
 class TranslationService:
     """
-    Offline local translation service using Hugging Face pipelines.
-    Designed for high-performance, thread-safe execution to maintain data privacy 
-    and satisfy strict HIPAA/GDPR compliance parameters.
-    
-    Supports major standard Indian (Indic) languages by mapping them to English 
-    using the multilingual model 'Helsinki-NLP/opus-mt-mul-en'.
+    Offline local translation service using HuggingFace pipelines.
+    Designed for thread-safe, cached execution to preserve data privacy.
+
+    Supports major Indian languages by mapping them to English using
+    the multilingual model 'Helsinki-NLP/opus-mt-mul-en'.
     """
-    
-    # Formally documented standard Indian languages supported by the offline pipeline
-    SUPPORTED_LANGUAGES = {
+
+    SUPPORTED_LANGUAGES: Dict[str, str] = {
         "kn": "Kannada (ಕನ್ನಡ)",
         "hi": "Hindi (हिन्दी)",
         "ta": "Tamil (தமிழ்)",
         "te": "Telugu (తెలుగు)",
         "ml": "Malayalam (മലയാളം)",
-        "mr": "Marathi (ಮರಾठी)",
+        "mr": "Marathi (मराठी)",
         "bn": "Bengali (বাংলা)",
         "gu": "Gujarati (ગુજરાતી)",
         "pa": "Punjabi (ਪੰਜਾਬੀ)",
         "ur": "Urdu (اردو)",
-        "or": "Odia (ଓଡ଼ିଆ)"
+        "or": "Odia (ଓଡ଼ିଆ)",
     }
-    
-    _instance = None
+
+    _instance: Optional["TranslationService"] = None
     _singleton_lock = threading.Lock()
-    
+
     def __new__(cls, *args, **kwargs):
         """Thread-safe Singleton initialization pattern."""
         if cls._instance is None:
             with cls._singleton_lock:
                 if cls._instance is None:
-                    cls._instance = super(TranslationService, cls).__new__(cls)
+                    cls._instance = super().__new__(cls)
                     cls._instance._initialized = False
         return cls._instance
 
@@ -48,11 +73,10 @@ class TranslationService:
         """Initializes class variables exactly once."""
         if getattr(self, "_initialized", False):
             return
-            
         self._pipeline = None
         self._init_lock = threading.Lock()
         self._initialized = True
-        logger.debug("TranslationService singleton instance structured.")
+        logger.debug("TranslationService singleton instance created.")
 
     @classmethod
     def get_supported_languages(cls) -> Dict[str, str]:
@@ -62,70 +86,91 @@ class TranslationService:
     def _get_pipeline(self):
         """
         Lazy-loads the translation pipeline in a thread-safe manner.
-        Caches the model internally so it is not re-initialized on subsequent calls.
+        Caches the pipeline internally so it is not re-initialized on subsequent calls.
         """
         if self._pipeline is None:
             with self._init_lock:
                 if self._pipeline is None:
-                    model_name = getattr(Config, "HF_TRANSLATION_MODEL", "Helsinki-NLP/opus-mt-mul-en")
-                    logger.info("Initializing local translation pipeline using model: %s...", model_name)
+                    model_name = getattr(
+                        Config, "HF_TRANSLATION_MODEL", "Helsinki-NLP/opus-mt-mul-en"
+                    )
+                    logger.info("Initializing translation pipeline: %s ...", model_name)
                     try:
-                        # Load the translation pipeline. For Helsinki-NLP multilingual models,
-                        # the default task is translation. We configure it to run on CUDA if available.
                         device = 0 if Config.DEVICE == "cuda" else -1
                         self._pipeline = pipeline(
-                            task="translation", 
+                            task="translation",
                             model=model_name,
-                            device=device
+                            device=device,
                         )
-                        logger.info("Local translation pipeline initialized successfully on device: %s.", Config.DEVICE)
-                    except Exception as e:
-                        logger.error("Failed to initialize offline Hugging Face pipeline for translation: %s", str(e), exc_info=True)
-                        raise RuntimeError(f"Translation pipeline initialization failed: {e}") from e
+                        logger.info(
+                            "Translation pipeline ready on device: %s", Config.DEVICE
+                        )
+                    except Exception as exc:
+                        logger.error(
+                            "Failed to init translation pipeline: %s", exc, exc_info=True
+                        )
+                        raise RuntimeError(
+                            f"Translation pipeline initialization failed: {exc}"
+                        ) from exc
         return self._pipeline
 
-    def translate(self, text: str) -> str:
+    # ------------------------------------------------------------------
+    # Public API
+    # ------------------------------------------------------------------
+
+    def translate(self, text: str, source_lang: str = "auto") -> str:
         """
-        Translates multilingual text (targeting Kannada, Hindi, Tamil, Telugu, etc.) into English.
-        
+        Translate multilingual text to English.
+
         Args:
-            text (str): The raw input text to translate.
-            
+            text:        Raw input text (any supported Indian language).
+            source_lang: BCP-47 language code (e.g. 'kn', 'hi').
+                         'auto' = let the model detect the language.
+                         When a known code is passed, a language prefix is prepended
+                         to the text for better accuracy on short inputs.
+
         Returns:
-            str: The translated text in English.
-            
+            str: Translated English text.
+
         Raises:
-            ValueError: If the input parameter is not a string.
-            RuntimeError: If translation fails during pipeline execution.
+            ValueError:  Input is not a string.
+            RuntimeError: Pipeline failure.
         """
         if not isinstance(text, str):
-            logger.error("Invalid input type provided for translation. Expected string, got: %s", type(text))
+            logger.error(
+                "Invalid input type for translation. Expected str, got: %s", type(text)
+            )
             raise ValueError("Input text must be a valid string.")
-            
-        # Graceful fallback for empty or whitespace-only inputs
+
         if not text or not text.strip():
-            logger.warning("Empty or whitespace-only text passed to translator. Returning empty string.")
+            logger.warning("Empty or whitespace-only text — returning empty string.")
             return ""
 
+        # Use cached internal translation (keyed on text + prefix)
+        prefix = LANG_PREFIXES.get(source_lang, "") if source_lang != "auto" else ""
+        return self._cached_translate(prefix + text)
+
+    @lru_cache(maxsize=512)
+    def _cached_translate(self, prefixed_text: str) -> str:
+        """
+        LRU-cached translation. Caches up to 512 unique inputs.
+        The cache key is the prefixed text string, so different language
+        prefixes for the same raw text are cached separately.
+        """
         try:
-            # Thread-safe pipeline retrieval
             translator = self._get_pipeline()
-            
-            logger.info("Executing local offline translation on text block (length: %d chars)...", len(text))
-            
-            # Execute pipeline.
-            # Helsinki-NLP/opus-mt-mul-en is a multilingual-to-English translation model.
-            # It maps Indian languages dynamically to English targets without explicit source code prefixes.
-            result = translator(text)
-            
+            logger.info(
+                "Translating text (length: %d chars) ...", len(prefixed_text)
+            )
+            result = translator(prefixed_text)
+
             if not result or "translation_text" not in result[0]:
-                logger.error("Pipeline returned an invalid translation result: %s", result)
-                raise RuntimeError("Translation output payload format is invalid.")
-                
-            translated_text = result[0]["translation_text"]
-            logger.info("Translation completed successfully. Resulting length: %d chars.", len(translated_text))
-            return translated_text
-            
-        except Exception as e:
-            logger.exception("A critical exception occurred during the translation process: %s", str(e))
-            raise RuntimeError(f"Offline translation pipeline execution failed: {e}") from e
+                raise RuntimeError("Pipeline returned an invalid result payload.")
+
+            translated = result[0]["translation_text"]
+            logger.info("Translation done. Output length: %d chars.", len(translated))
+            return translated
+
+        except Exception as exc:
+            logger.exception("Translation failed: %s", exc)
+            raise RuntimeError(f"Offline translation failed: {exc}") from exc
