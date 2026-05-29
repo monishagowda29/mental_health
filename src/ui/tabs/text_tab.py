@@ -9,6 +9,7 @@ import streamlit as st
 from src.services.bert import MAX_BERT_WORDS
 from src.services.translation import TranslationService
 from src.services.bert import BERTClassifierService
+from src.services.history_manager import HistoryManager
 
 
 LABELS = ["anxiety", "depression", "normal"]
@@ -156,20 +157,30 @@ def render(S: dict, lang: str, is_multilingual: bool,
 
         _render_result(S, lang, raw, label_pred, probs, is_crisis=is_crisis)
 
-        # ── Session History ──
+        # ── Persistent Storage Scoping ──
+        conf_str = f"{float(probs.max()) * 100:.1f}%"
+        HistoryManager.save_record(
+            patient_name=st.session_state.patient_name,
+            text=raw,
+            label=label_pred,
+            confidence=conf_str,
+            lang=lang.upper()
+        )
+
+        # ── Session Cache ──
         if "result_history" not in st.session_state:
             st.session_state.result_history = []
         st.session_state.result_history.insert(0, {
             "text":  raw[:60] + ("..." if len(raw) > 60 else ""),
             "label": label_pred,
-            "conf":  f"{float(probs.max()) * 100:.1f}%",
+            "conf":  conf_str,
             "lang":  lang.upper(),
         })
         # Keep only last 10
         st.session_state.result_history = st.session_state.result_history[:10]
 
     # ── History Panel ──
-    _render_history(S)
+    _render_history(S, st.session_state.patient_name)
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -222,20 +233,91 @@ def _render_result(S: dict, lang: str, raw: str, label_pred: str, probs, is_cris
     )
 
 
-def _render_history(S: dict) -> None:
-    history = st.session_state.get("result_history", [])
-    if not history:
+def _render_history(S: dict, patient_name: str) -> None:
+    from src.services.history_manager import HistoryManager
+    import pandas as pd
+    from datetime import datetime
+
+    records = HistoryManager.get_history(patient_name, limit=20)
+    
+    st.divider()
+    st.markdown(f"### 📈 Personal Wellbeing Tracker")
+    st.caption(f"Scoped history logging panel for patient: **{patient_name}** (100% Private · Stored Offline)")
+
+    if not records:
+        st.info("No persistent history logs found for this patient ID yet. Run your first analysis to see trend logs.")
         return
 
-    with st.expander(S["history_title"], expanded=False):
-        for i, entry in enumerate(history):
-            icon = ICONS_MAP[entry["label"]][0]
-            color = ICONS_MAP[entry["label"]][3]
+    # Extrapolate statistics
+    total = len(records)
+    dep_count = sum(1 for r in records if r["label"] == "depression")
+    anx_count = sum(1 for r in records if r["label"] == "anxiety")
+    norm_count = sum(1 for r in records if r["label"] == "normal")
+
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Total Assessments", total)
+    c2.metric("🟢 Low Risk Score", f"{(norm_count/total)*100:.0f}%")
+    c3.metric("🟡 Anxiety Patterns", f"{(anx_count/total)*100:.0f}%")
+    c4.metric("🔴 Depressive Patterns", f"{(dep_count/total)*100:.0f}%")
+
+    # Draw Wellbeing Trend Line Chart
+    st.markdown("**Linguistic Risk Severity Trend (Last 10 Checks)**")
+    st.caption("0 = Low Risk · 1 = Anxiety Patterns · 2 = Depressive Patterns")
+    
+    chart_data = []
+    # Reverse to show chronological order left-to-right
+    for r in reversed(records[:10]):
+        score = 2 if r["label"] == "depression" else 1 if r["label"] == "anxiety" else 0
+        try:
+            # Parse ISO timestamp and format for the x-axis
+            dt = datetime.fromisoformat(r["timestamp"]).strftime("%m/%d %H:%M")
+        except Exception:
+            dt = "Unknown"
+        chart_data.append({"Time": dt, "Risk Severity": score})
+    
+    df = pd.DataFrame(chart_data)
+    if not df.empty:
+        st.line_chart(df.set_index("Time"), use_container_width=True)
+
+    # Scoped Action controls
+    col_x, col_y = st.columns(2)
+    
+    with col_x:
+        csv_data = HistoryManager.export_csv(patient_name)
+        st.download_button(
+            label="⬇&nbsp; Export Patient History (CSV)",
+            data=csv_data,
+            file_name=f"mindscan_history_{patient_name.lower().replace(' ', '_')}.csv",
+            mime="text/csv",
+            use_container_width=True,
+            key="btn_export_scoped_history"
+        )
+
+    with col_y:
+        if st.button("🗑&nbsp; Erase Patient Data Logs", type="secondary", use_container_width=True, key="btn_clear_scoped_history"):
+            HistoryManager.clear_history(patient_name)
+            # Clear volatile session state history cache
+            if "result_history" in st.session_state:
+                st.session_state.result_history = []
+            st.toast(f"🧹 Scoped history records erased for {patient_name}!", icon="🗑️")
+            st.rerun()
+
+    # Detailed history expander
+    with st.expander(f"📋 View Raw Records List ({total})", expanded=False):
+        for entry in records:
+            lbl = entry["label"]
+            icon = ICONS_MAP[lbl][0]
+            color = ICONS_MAP[lbl][3]
+            try:
+                dt_str = datetime.fromisoformat(entry["timestamp"]).strftime("%Y-%m-%d %H:%M:%S")
+            except Exception:
+                dt_str = "Unknown"
+                
             st.markdown(
-                f'<div style="padding:0.4rem 0.8rem;border-left:3px solid {color};margin:0.3rem 0;">'
-                f'<span style="color:{color};font-weight:700;">{icon} {entry["label"].upper()}</span> '
-                f'<span style="color:#9ca3af;font-size:0.82rem;"> · {entry["conf"]} · [{entry["lang"]}]</span><br>'
-                f'<span style="color:#6b7280;font-size:0.8rem;">{entry["text"]}</span>'
+                f'<div style="padding:0.5rem 0.8rem;border-left:3px solid {color};margin:0.4rem 0;background:rgba(255,255,255,0.01);border-radius:0 8px 8px 0;">'
+                f'<span style="color:{color};font-weight:700;">{icon} {lbl.upper()}</span> '
+                f'<span style="color:#9ca3af;font-size:0.8rem;"> · {entry["confidence"]} · [{entry["lang"]}] · {dt_str}</span><br>'
+                f'<span style="color:#6b7280;font-size:0.82rem;">{entry["text"][:150] + ("..." if len(entry["text"]) > 150 else "")}</span>'
                 f'</div>',
                 unsafe_allow_html=True,
             )

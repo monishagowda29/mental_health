@@ -251,9 +251,11 @@ def _render_contrast_card() -> None:
 
 
 def _render_report_downloader(name: str, score: int, severity: str, scores: list, questions: list) -> None:
+    patient = st.session_state.get("patient_name", "Guest Patient")
     report_text = f"""============================================================
            MINDSCAN CLINICAL SCREENING REPORT
 ============================================================
+Patient Name : {patient}
 Generated On : {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 Assessment   : {name}
 Total Score  : {score}

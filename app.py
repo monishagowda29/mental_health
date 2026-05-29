@@ -32,6 +32,8 @@ st.markdown(PREMIUM_CSS, unsafe_allow_html=True)
 # ── Session State ──
 if "ui_lang" not in st.session_state:
     st.session_state.ui_lang = "en"
+if "patient_name" not in st.session_state:
+    st.session_state.patient_name = "Guest Patient"
 
 # ── Services ──
 @st.cache_resource
@@ -97,25 +99,46 @@ if not bert_ok:
 if not Config.GROQ_API_KEY:
     st.sidebar.warning("⚠️ No `GROQ_API_KEY` found — Image Analysis tab is disabled. Add it to your `.env` file.")
 
-# ── Language Selector (2×4 grid) ──
-st.markdown(
-    f'<p style="text-align:center;color:#6b7280;font-size:0.72rem;font-weight:700;'
-    f'letter-spacing:0.12em;text-transform:uppercase;margin-bottom:0.6rem;">🌐 {S["choose_lang"]}</p>',
+# ── Sidebar Patient Profile ──
+st.sidebar.markdown("""
+<div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.05);border-radius:12px;padding:0.9rem;margin-top:1rem;">
+    <p style="color:#6b7280;font-size:0.75rem;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.4rem;margin-top:0;">👤 ACTIVE WORKSPACE</p>
+    <h4 style="font-family:'Outfit',sans-serif;font-size:1.1rem;font-weight:700;color:#c084fc;margin:0;">Patient Record Panel</h4>
+</div>
+""", unsafe_allow_html=True)
+
+patient_input = st.sidebar.text_input(
+    "Active Patient Name / ID:",
+    value=st.session_state.patient_name,
+    key="patient_name_input_field"
+)
+if patient_input.strip() != st.session_state.patient_name:
+    st.session_state.patient_name = patient_input.strip() or "Guest Patient"
+    st.rerun()
+
+st.sidebar.divider()
+
+# ── Sidebar Manual Language Override ──
+st.sidebar.markdown(
+    f'<p style="color:#6b7280;font-size:0.75rem;font-weight:700;'
+    f'letter-spacing:0.08em;text-transform:uppercase;margin-bottom:0.6rem;">🌐 {S["choose_lang"]}</p>',
     unsafe_allow_html=True,
 )
 lang_codes = list(LANG_OPTIONS.keys())
-for row in [lang_codes[:4], lang_codes[4:]]:
-    cols = st.columns(4)
-    for idx, code in enumerate(row):
-        info      = LANG_OPTIONS[code]
-        is_active = (code == st.session_state.ui_lang)
-        label     = f"✓  {info['native']}" if is_active else info["native"]
-        if cols[idx].button(label, key=f"lang_btn_{code}",
-                            use_container_width=True,
-                            type="primary" if is_active else "secondary"):
-            if code != st.session_state.ui_lang:
-                st.session_state.ui_lang = code
-                st.rerun()
+lang_index = lang_codes.index(st.session_state.ui_lang)
+
+chosen_code = st.sidebar.selectbox(
+    "Select Language Option:",
+    options=lang_codes,
+    format_func=lambda x: f"{LANG_OPTIONS[x]['native']}",
+    index=lang_index,
+    key="lang_selectbox_override"
+)
+if chosen_code != st.session_state.ui_lang:
+    st.session_state.ui_lang = chosen_code
+    st.rerun()
+
+st.sidebar.divider()
 
 # Re-resolve after possible language change
 lang           = st.session_state.ui_lang
