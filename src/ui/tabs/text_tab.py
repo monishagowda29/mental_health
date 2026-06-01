@@ -94,8 +94,29 @@ def render(S: dict, lang: str, is_multilingual: bool,
         S["input_label"],
         height=150,
         placeholder=S["input_placeholder"],
+        max_chars=2500,
         key="text_analysis_input",
     )
+
+    # ── Live Character Countdown ──
+    char_count = len(text_input)
+    char_pct = min(100.0, (char_count / 2500.0) * 100.0)
+    char_color = "text-gray-400"
+    if char_count > 2000:
+        char_color = "text-yellow-500 font-medium"
+    if char_count >= 2500:
+        char_color = "text-rose-500 font-bold"
+        
+    st.markdown(f"""
+<div class="flex justify-between items-center px-1 mt-1 text-[11px] {char_color}">
+    <span>Max limit: 2,500 characters</span>
+    <span>{char_count:,} / 2,500 characters ({char_pct:.1f}%)</span>
+</div>
+<div class="w-full bg-gray-800 bg-opacity-40 rounded-full h-1 mt-1 overflow-hidden">
+    <div class="h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-rose-500" style="width: {char_pct}%;"></div>
+</div>
+<div style="margin-bottom: 1.2rem;"></div>
+""", unsafe_allow_html=True)
 
     analyze_clicked = st.button(
         S["btn_analyze"], type="primary", use_container_width=True, key="btn_analyze_text"
@@ -191,45 +212,86 @@ def _render_result(S: dict, lang: str, raw: str, label_pred: str, probs, is_cris
     if is_crisis:
         _render_crisis_card()
         
-    st.markdown(f"#### {S['result_title']}")
+    # ── Continuous Severity Spectrum Meter ──
+    p_dep = float(probs[0])
+    p_norm = float(probs[1])
+    p_anx = float(probs[2])
+    
+    # Calculate position mapping: Normal -> 15%, Anxiety -> 50%, Depression -> 85%
+    position = (p_norm * 15.0) + (p_anx * 50.0) + (p_dep * 85.0)
+    
+    if label_pred == "normal":
+        color_class = "text-emerald-400"
+        status_text = "🟢 Stable Spectrum / Low Distress"
+        dot_color = "bg-emerald-400"
+        advice_text = S["advice_normal"]
+    elif label_pred == "anxiety":
+        color_class = "text-amber-400"
+        status_text = "🟡 Moderate Distress / Anxiety Spectrum"
+        dot_color = "bg-amber-400"
+        advice_text = S["advice_anxiety"]
+    else:
+        color_class = "text-rose-400"
+        status_text = "🔴 High Distress / Depressive Spectrum"
+        dot_color = "bg-rose-500"
+        advice_text = S["advice_depression"]
 
-    advice_map = {
-        "normal":     S["advice_normal"],
-        "anxiety":    S["advice_anxiety"],
-        "depression": S["advice_depression"],
-    }
-    icon, label_text, css_class, color = ICONS_MAP[label_pred]
-
-    st.markdown(f"""
-<div class="{css_class}">
-    <p class="result-label" style="color:{color};">{icon} {label_text}</p>
-    <p class="result-advice" style="color:{color}80;">{advice_map[label_pred]}</p>
-</div>""", unsafe_allow_html=True)
-
-    # Confidence bars
-    st.markdown(f"#### {S['confidence_title']}")
-    conf_html = ""
-    for lbl, prob in zip(LABELS, probs):
-        pct = float(prob) * 100
-        ci, cc, cg = CONF_ICONS[lbl]
-        conf_html += f"""
-<div class="conf-row">
-    <span class="conf-label">{ci} {lbl.capitalize()}</span>
-    <div class="conf-bar-bg">
-        <div class="conf-bar-fill" style="width:{pct:.1f}%;background:{cg};"></div>
+    spectrum_html = f"""
+<div class="bg-gray-900 bg-opacity-65 border border-gray-800 border-opacity-70 rounded-2xl p-5 shadow-2xl backdrop-filter backdrop-blur-xl my-6">
+    <div class="flex items-center justify-between mb-4">
+        <span class="text-gray-400 text-xs font-semibold uppercase tracking-wider">Clinical Severity Spectrum Meter</span>
+        <span class="text-xs sm:text-sm font-extrabold {color_class} tracking-wide">{status_text}</span>
     </div>
-    <span class="conf-pct" style="color:{cc};">{pct:.1f}%</span>
-</div>"""
-    st.markdown(conf_html, unsafe_allow_html=True)
+    
+    <!-- Custom HSL Spectrum Bar -->
+    <div class="relative w-full h-3 bg-gradient-to-r from-emerald-500 via-amber-400 to-rose-600 rounded-full my-6">
+        <!-- Glowing Sliding Pointer Pin -->
+        <div class="absolute w-5 h-5 bg-white border-2 border-gray-900 rounded-full flex items-center justify-center transform transition-all duration-700 shadow-xl" 
+             style="left: {position}%; top: -4px; margin-left: -10px; box-shadow: 0 0 12px rgba(255, 255, 255, 0.8), 0 4px 6px rgba(0,0,0,0.4);">
+            <div class="w-1.5 h-1.5 {dot_color} rounded-full animate-ping opacity-75"></div>
+            <div class="w-1.5 h-1.5 {dot_color} rounded-full absolute"></div>
+        </div>
+    </div>
+    
+    <!-- Legend Markers below -->
+    <div class="flex justify-between text-[9px] text-gray-500 font-bold uppercase tracking-wider px-1">
+        <span class="text-emerald-500/80">🟢 STABLE (LOW)</span>
+        <span class="text-amber-500/80">🟡 ANXIOUS (MID)</span>
+        <span class="text-rose-500/80">🔴 DEPRESSIVE (HIGH)</span>
+    </div>
+    
+    <!-- Detailed advice and confidence metrics -->
+    <div class="mt-4 leading-relaxed bg-gray-950 bg-opacity-40 border border-gray-800 border-opacity-60 rounded-xl p-4 space-y-3">
+        <p class="text-xs text-gray-300 font-medium leading-relaxed">
+            🔍 <strong>Clinical Context:</strong> {advice_text}
+        </p>
+        <div class="grid grid-cols-3 gap-2 text-center pt-2 border-t border-gray-800 border-opacity-50">
+            <div class="p-1">
+                <p class="text-[9px] text-gray-500 font-semibold uppercase">Normal</p>
+                <p class="text-xs font-bold text-emerald-400">{p_norm * 100:.1f}%</p>
+            </div>
+            <div class="p-1 border-x border-gray-800 border-opacity-50">
+                <p class="text-[9px] text-gray-500 font-semibold uppercase">Anxiety</p>
+                <p class="text-xs font-bold text-amber-400">{p_anx * 100:.1f}%</p>
+            </div>
+            <div class="p-1">
+                <p class="text-[9px] text-gray-500 font-semibold uppercase">Depression</p>
+                <p class="text-xs font-bold text-rose-400">{p_dep * 100:.1f}%</p>
+            </div>
+        </div>
+    </div>
+</div>
+"""
+    st.markdown(spectrum_html, unsafe_allow_html=True)
 
-    # Calibration note
+    # Calibration & Disclaimer
     st.markdown(
-        '<p style="color:#4b5563;font-size:0.76rem;margin-top:0.6rem;">'
+        '<p style="color:#4b5563;font-size:0.76rem;margin-top:0.6rem;margin-bottom:0;">'
         '💡 Confidence scores are relative model outputs, not clinical probabilities.</p>',
         unsafe_allow_html=True,
     )
     st.markdown(
-        f'<p style="color:#4b5563;font-size:0.78rem;margin-top:0.4rem;">{S["disclaimer"]}</p>',
+        f'<p style="color:#4b5563;font-size:0.78rem;margin-top:0.4rem;margin-bottom:0.8rem;">{S["disclaimer"]}</p>',
         unsafe_allow_html=True,
     )
 

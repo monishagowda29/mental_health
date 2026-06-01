@@ -91,6 +91,39 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
+# ── Global Expandable Safety Banner ──
+st.markdown("""
+<details class="bg-red-950 bg-opacity-20 backdrop-filter backdrop-blur-lg border border-red-500 border-opacity-30 rounded-2xl p-4 mb-6 transition-all duration-300 group">
+    <summary class="flex items-center justify-between cursor-pointer focus:outline-none list-none select-none">
+        <div class="flex items-center gap-3">
+            <span class="animate-pulse flex h-3 w-3 relative">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-3 w-3 bg-rose-500"></span>
+            </span>
+            <span class="font-semibold text-rose-300 text-sm tracking-wide uppercase">🚨 Clinical Emergency Support & Crisis Resources</span>
+        </div>
+        <span class="text-rose-400 font-bold transition-transform duration-300 group-open:rotate-180">▼</span>
+    </summary>
+    <div class="mt-4 text-rose-200 text-opacity-90 text-sm space-y-3">
+        <p class="leading-relaxed">
+            If you or someone you know is going through a difficult time, experiencing severe distress, or having thoughts of self-harm, please reach out immediately. 
+            Compassionate, professional, and confidential support is free, private, and available 24/7.
+        </p>
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 pt-2">
+            <a href="tel:14416" style="text-decoration:none;color:#ffffff;" class="flex items-center justify-center gap-2 bg-rose-600 bg-opacity-90 hover:bg-rose-500 text-white font-bold py-2 px-4 rounded-xl border border-rose-400 border-opacity-30 shadow-lg transition-all text-center">
+                📞 Call Tele-MANAS: 14416
+            </a>
+            <a href="tel:9152987821" style="text-decoration:none;color:#fda4af;" class="flex items-center justify-center gap-2 bg-rose-950 bg-opacity-40 hover:bg-rose-900 text-rose-300 font-semibold py-2 px-4 rounded-xl border border-rose-500 border-opacity-20 transition-all text-center">
+                📞 Call TISS iCall: 9152987821
+            </a>
+            <a href="tel:9820466726" style="text-decoration:none;color:#fda4af;" class="flex items-center justify-center gap-2 bg-rose-950 bg-opacity-40 hover:bg-rose-900 text-rose-300 font-semibold py-2 px-4 rounded-xl border border-rose-500 border-opacity-20 transition-all text-center">
+                📞 Call AASRA: 9820466726
+            </a>
+        </div>
+    </div>
+</details>
+""", unsafe_allow_html=True)
+
 if not bert_ok:
     st.error(f"BERT model not found at: `{Config.MODEL_DIR}` — Check model weights.")
     st.stop()
