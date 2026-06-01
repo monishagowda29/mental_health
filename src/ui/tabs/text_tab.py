@@ -72,9 +72,10 @@ def _render_crisis_card() -> None:
         and confidential support is available 24/7.
     </p>
     <div class="crisis-btn-container">
-        <a href="tel:988" class="crisis-btn" target="_blank">📞 Call 988 (India / US Helpline)</a>
-        <a href="https://www.aasra.info" class="crisis-btn-sec" target="_blank">🌐 AASRA Helpline (24x7)</a>
-        <a href="https://www.vandrevalafoundation.com" class="crisis-btn-sec" target="_blank">🌐 Vandrevala Foundation</a>
+        <a href="tel:988" class="crisis-btn" target="_blank">📞 Call 988 (Crisis Lifeline)</a>
+        <a href="tel:9152987821" class="crisis-btn" target="_blank">📞 Call TISS iCall: 9152987821</a>
+        <a href="tel:9820466726" class="crisis-btn-sec" target="_blank">📞 Call AASRA: 9820466726</a>
+        <a href="tel:18602662345" class="crisis-btn-sec" target="_blank">📞 Call Vandrevala: 1860-2662-345</a>
         <a href="https://findahelpline.com" class="crisis-btn-sec" target="_blank">🌍 International Crisis Contacts</a>
     </div>
 </div>
@@ -153,7 +154,7 @@ def render(S: dict, lang: str, is_multilingual: bool,
                 return
 
         # Trigger crisis card if high-risk keywords OR depression probability >= 80%
-        is_crisis = has_crisis_keyword or (label_pred == "depression" and probs[1] >= 0.80)
+        is_crisis = has_crisis_keyword or (label_pred == "depression" and probs[0] >= 0.80)
 
         _render_result(S, lang, raw, label_pred, probs, is_crisis=is_crisis)
 
