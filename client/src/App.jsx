@@ -189,18 +189,32 @@ function App() {
   };
 
   // Download Encrypted PDF Report
-  const downloadReport = async () => {
+  const downloadReport = async (type = 'journal') => {
     try {
-      const latestJournal = journals.find(j => j.status === 'SUCCESS');
-      const results = {
-        prediction: latestJournal ? latestJournal.prediction : 'No text assessed',
-        depression_score: latestJournal ? latestJournal.scores.depression : 0.0,
-        anxiety_score: latestJournal ? latestJournal.scores.anxiety : 0.0,
-        normal_score: latestJournal ? latestJournal.scores.normal : 0.0,
-        processed_text: latestJournal ? latestJournal.decryptedText : 'No entries submitted yet.',
-        assessment_type: "Comprehensive Clinical Screener Sync",
-        language: "English / Local Translate"
-      };
+      let results = {};
+      if (type === 'journal') {
+        const latestJournal = journals.find(j => j.status === 'SUCCESS');
+        results = {
+          prediction: latestJournal ? latestJournal.prediction : 'No text assessed',
+          depression_score: latestJournal ? latestJournal.scores.depression : 0.0,
+          anxiety_score: latestJournal ? latestJournal.scores.anxiety : 0.0,
+          normal_score: latestJournal ? latestJournal.scores.normal : 0.0,
+          processed_text: latestJournal ? latestJournal.decryptedText : 'No entries submitted yet.',
+          assessment_type: "Comprehensive Clinical Screener Sync",
+          language: "English / Local Translate"
+        };
+      } else {
+        // Document Scan results
+        results = {
+          prediction: 'scan_assessment',
+          depression_score: 0.0,
+          anxiety_score: 0.0,
+          normal_score: 0.0,
+          processed_text: scanResult || 'No scan results available.',
+          assessment_type: `OCR Document Scan: ${scanMode.toUpperCase()}`,
+          language: "Image Input"
+        };
+      }
 
       const res = await fetch(`${BACKEND_BASE_URL}/api/report`, {
         method: 'POST',
@@ -216,7 +230,7 @@ function App() {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `mindscan_report_${patientId}.pdf`;
+      a.download = `mindscan_${type}_report_${patientId}.pdf`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -537,7 +551,7 @@ function App() {
                   {journals.length > 0 && (
                     <div className="flex gap-2">
                       <button 
-                        onClick={downloadReport}
+                        onClick={() => downloadReport('journal')}
                         className="text-gray-400 hover:text-white text-xs font-semibold flex items-center gap-1 bg-slate-900/50 px-3 py-1.5 rounded-lg border border-white/5"
                       >
                         <Download className="h-3 w-3" />
@@ -946,7 +960,7 @@ function App() {
                       
                       {scanTaskStatus === 'SUCCESS' && (
                         <button 
-                          onClick={downloadReport}
+                          onClick={() => downloadReport('scan')}
                           className="w-full bg-slate-900 border border-white/10 hover:bg-slate-800 text-white font-bold text-xs py-2 rounded-xl transition-all flex items-center justify-center gap-1.5"
                         >
                           <Download className="h-3.5 w-3.5" />
