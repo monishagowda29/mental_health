@@ -89,7 +89,9 @@ export const useJournalStore = create((set, get) => ({
       return;
     }
 
-    const tempId = crypto.randomUUID();
+    const tempId = typeof crypto !== 'undefined' && crypto.randomUUID 
+      ? crypto.randomUUID() 
+      : Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
     const timestamp = new Date().toISOString();
 
     // 1. Client-Side Encryption
