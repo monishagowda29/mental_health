@@ -57,8 +57,17 @@ function App() {
         return true;
       }
     }
+
+    // 3. Check PHQ-9 Screener results (depression / self-harm)
+    if (phq9Answers[8] > 0) {
+      return true;
+    }
+    if (screenerSubmitted.phq9 && phq9Score >= 15) {
+      return true;
+    }
+
     return false;
-  }, [journalInput, journals]);
+  }, [journalInput, journals, phq9Answers, phq9Score, screenerSubmitted.phq9]);
 
   // PHQ-9 Questions
   const phq9Questions = [
@@ -202,6 +211,39 @@ function App() {
           processed_text: latestJournal ? latestJournal.decryptedText : 'No entries submitted yet.',
           assessment_type: "Comprehensive Clinical Screener Sync",
           language: "English / Local Translate"
+        };
+      } else if (type === 'screener') {
+        // Clinical Screener results
+        const phqSeverity = getSeverity('phq9', phq9Score).label;
+        const gadSeverity = getSeverity('gad7', gad7Score).label;
+        
+        let textSummary = `CLINICAL SCREENERS SUMMARY REPORT\n\n`;
+        textSummary += `1. PHQ-9 Depression Screener Score: ${phq9Score}/27\n`;
+        textSummary += `   Severity: ${phqSeverity}\n\n`;
+        textSummary += `   PHQ-9 Question Details:\n`;
+        phq9Questions.forEach((q, idx) => {
+          const val = phq9Answers[idx];
+          const labels = ["Not at all", "Several days", "More than half the days", "Nearly every day"];
+          textSummary += `   - Q${idx+1}: ${q} -> [${labels[val] || 'Not answered'}]\n`;
+        });
+        
+        textSummary += `\n2. GAD-7 Anxiety Screener Score: ${gad7Score}/21\n`;
+        textSummary += `   Severity: ${gadSeverity}\n\n`;
+        textSummary += `   GAD-7 Question Details:\n`;
+        gad7Questions.forEach((q, idx) => {
+          const val = gad7Answers[idx];
+          const labels = ["Not at all", "Several days", "More than half the days", "Nearly every day"];
+          textSummary += `   - Q${idx+1}: ${q} -> [${labels[val] || 'Not answered'}]\n`;
+        });
+
+        results = {
+          prediction: `PHQ-9: ${phqSeverity.split(' ')[0]} | GAD-7: ${gadSeverity.split(' ')[0]}`,
+          depression_score: phq9Score / 27,
+          anxiety_score: gad7Score / 21,
+          normal_score: Math.max(0.0, 1.0 - (phq9Score / 27 + gad7Score / 21) / 2),
+          processed_text: textSummary,
+          assessment_type: "Interactive Clinical Screeners (PHQ-9 & GAD-7)",
+          language: "Clinical Standard Questionnaire"
         };
       } else {
         // Document Scan results
@@ -738,6 +780,14 @@ function App() {
                           </p>
                         </div>
                       )}
+                      
+                      <button 
+                        onClick={() => downloadReport('screener')}
+                        className="w-full bg-slate-900 border border-white/10 hover:bg-slate-800 text-white font-bold text-xs py-2.5 rounded-xl transition-all flex items-center justify-center gap-1.5 mt-2"
+                      >
+                        <Download className="h-3.5 w-3.5" />
+                        <span>Export Screener Report to Encrypted PDF</span>
+                      </button>
                     </div>
                   )}
 
@@ -821,6 +871,14 @@ function App() {
                           </p>
                         </div>
                       )}
+                      
+                      <button 
+                        onClick={() => downloadReport('screener')}
+                        className="w-full bg-slate-900 border border-white/10 hover:bg-slate-800 text-white font-bold text-xs py-2.5 rounded-xl transition-all flex items-center justify-center gap-1.5 mt-2"
+                      >
+                        <Download className="h-3.5 w-3.5" />
+                        <span>Export Screener Report to Encrypted PDF</span>
+                      </button>
                     </div>
                   )}
 
