@@ -312,7 +312,7 @@ function App() {
         {/* Left Sidebar: Workspace & ZK Security Settings */}
         <aside className="lg:col-span-1 flex flex-col gap-6">
           <div className="glass-panel p-6 rounded-2xl flex flex-col gap-4">
-            <div className="flex items-center gap-2 text-indigo-400 font-outfit font-semibold uppercase text-xs tracking-wider">
+            <div className="flex items-center gap-2 text-indigo-400 font-outfit font-semibold uppercase text-xs leading-normal tracking-wider">
               <User className="h-4 w-4" />
               <span>Patient Profile Workspace</span>
             </div>
@@ -329,7 +329,7 @@ function App() {
             </div>
 
             <div className="border-t border-white/5 pt-4">
-              <div className="flex items-center gap-2 text-rose-400 font-outfit font-semibold uppercase text-xs tracking-wider mb-2">
+              <div className="flex items-center gap-2 text-rose-400 font-outfit font-semibold uppercase text-xs leading-normal tracking-wider mb-2">
                 <Lock className="h-4 w-4" />
                 <span>Zero-Knowledge Encryption</span>
               </div>
@@ -413,7 +413,7 @@ function App() {
                     <select 
                       value={langHint} 
                       onChange={(e) => setLangHint(e.target.value)}
-                      className="bg-slate-950/50 border border-white/10 rounded-lg text-xs py-1 px-2.5 text-gray-300 focus:outline-none"
+                      className="bg-slate-950/50 border border-white/10 rounded-lg text-xs py-1 pl-2.5 pr-8 text-gray-300 focus:outline-none custom-select"
                     >
                       <option value="auto">🌐 Auto-Detect Language</option>
                       <option value="en">English</option>
@@ -516,15 +516,15 @@ function App() {
                   <div className="grid grid-cols-3 gap-4 text-center">
                     <div className="bg-slate-900/40 p-3.5 rounded-xl border border-white/5">
                       <div className="text-xl font-extrabold text-emerald-400">{labelDistribution.normal}%</div>
-                      <div className="text-[10px] text-gray-500 uppercase tracking-wider mt-0.5">Wellness Patterns</div>
+                      <div className="text-[10px] text-gray-500 uppercase tracking-wider leading-normal mt-0.5">Wellness Patterns</div>
                     </div>
                     <div className="bg-slate-900/40 p-3.5 rounded-xl border border-white/5">
                       <div className="text-xl font-extrabold text-amber-400">{labelDistribution.anxiety}%</div>
-                      <div className="text-[10px] text-gray-500 uppercase tracking-wider mt-0.5">Anxious Patterns</div>
+                      <div className="text-[10px] text-gray-500 uppercase tracking-wider leading-normal mt-0.5">Anxious Patterns</div>
                     </div>
                     <div className="bg-slate-900/40 p-3.5 rounded-xl border border-white/5">
                       <div className="text-xl font-extrabold text-rose-400">{labelDistribution.depression}%</div>
-                      <div className="text-[10px] text-gray-500 uppercase tracking-wider mt-0.5">Depressive Patterns</div>
+                      <div className="text-[10px] text-gray-500 uppercase tracking-wider leading-normal mt-0.5">Depressive Patterns</div>
                     </div>
                   </div>
                 </div>
@@ -887,7 +887,7 @@ function App() {
 
                   <div className="flex flex-col justify-center gap-4">
                     <div className="bg-slate-900/40 p-4 rounded-xl border border-white/5 space-y-2 text-xs">
-                      <div className="text-gray-400 uppercase text-[10px] font-bold tracking-wider">File Metadata</div>
+                      <div className="text-gray-400 uppercase text-[10px] font-bold tracking-wider leading-normal">File Metadata</div>
                       <div className="text-gray-300">Name: {scanFile.name}</div>
                       <div className="text-gray-300">Size: {(scanFile.size / 1024).toFixed(1)} KB</div>
                     </div>
