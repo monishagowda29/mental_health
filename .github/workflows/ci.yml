@@ -1,4 +1,4 @@
-name: CI
+name: MindScan Backend CI
 
 on:
   push:
@@ -7,24 +7,58 @@ on:
     branches: [master, main]
 
 jobs:
-  test:
+  lint-and-syntax:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Syntax Compile check
+        run: |
+          python -m py_compile app.py
+          python -m py_compile src/config.py src/services/bert.py src/services/translation.py src/services/vision.py src/ui/strings.py src/ui/styles.py
+          find app -name "*.py" | xargs python -m py_compile
+
+  unit-tests:
+    needs: lint-and-syntax
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
           python-version: "3.12"
           cache: "pip"
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: |
+          pip install -r requirements.txt
+          pip install pytest cryptography
 
-      - name: Run unit tests
+      - name: Run Pytest suite
         run: pytest tests/ -v --tb=short
 
-      - name: Syntax check — app.py
-        run: python -m py_compile app.py
+  integration-tests:
+    needs: unit-tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
 
-      - name: Syntax check — src modules
-        run: python -m py_compile src/config.py src/services/bert.py src/services/translation.py src/services/vision.py src/ui/strings.py src/ui/styles.py src/ui/tabs/text_tab.py src/ui/tabs/image_tab.py src/ui/tabs/batch_tab.py
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install cryptography
+
+      - name: Run Custom Integration Test Suite
+        run: python tests/run_tests.py

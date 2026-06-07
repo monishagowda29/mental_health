@@ -6,6 +6,8 @@ import logging
 import os
 import sys
 from pathlib import Path
+from typing import Optional
+import threading
 from celery import Celery
 import numpy as np
 
@@ -83,5 +85,73 @@ def queue_text_analysis(patient_id: str, text: str, lang_hint: str) -> dict:
         "depression_score": float(probs[0])
     }
 
-from typing import Optional
-import threading
+_vision_service = None
+
+def get_vision_service():
+    global _vision_service
+    if _vision_service is None:
+        with _init_lock:
+            if _vision_service is None:
+                from src.services.vision import GroqVisionService
+                _vision_service = GroqVisionService()
+    return _vision_service
+
+@celery_app.task(name="tasks.queue_image_scan")
+def queue_image_scan(patient_id: str, image_bytes_hex: str, mode: str) -> dict:
+    """
+    Celery task running OpenCV image warping and Groq Llama 4 Scout Vision analysis.
+    """
+    logger.info("Initializing Celery Image Scan task for patient: %s", patient_id)
+    img_bytes = bytes.fromhex(image_bytes_hex)
+    
+    # 1. OpenCV Preprocessing
+    from app.services.image_processor import ImageProcessor
+    processor = ImageProcessor()
+    processed_bytes = processor.process_image(img_bytes)
+    
+    # 2. Convert processed bytes to PIL Image
+    import io
+    from PIL import Image
+    pil_image = Image.open(io.BytesIO(processed_bytes))
+    
+    # 3. Resolve prompt structure
+    prompts = {
+        "general": (
+            "Analyze this image thoroughly and provide:\n"
+            "1. **Scene Description** - Key visual elements, setting, objects, colors.\n"
+            "2. **Emotional Tone** - Mood and atmosphere the image conveys.\n"
+            "3. **Mental Health Relevance** - Visual cues related to emotional wellbeing. Be empathetic.\n"
+            "4. **Key Insights** - Most important takeaways.\n"
+            "Use clear headings. Be thorough and empathetic."
+        ),
+        "social_media": (
+            "Analyze this as a social media post and provide:\n"
+            "1. **Visual Content** - People, environment, objects, filters, aesthetic.\n"
+            "2. **Emotional Signals** - Emotions via expressions, body language, colors.\n"
+            "3. **Mental Health Indicators** - Signs of distress, isolation, or positivity. Rate: Positive / Neutral / Concerning.\n"
+            "4. **Context** - What the poster may be communicating.\n"
+            "Be empathetic and non-judgmental."
+        ),
+        "chart": (
+            "Analyze this chart or graph and provide:\n"
+            "1. **Chart Type and Structure** - Visualization type, axes, scales.\n"
+            "2. **Key Data Patterns** - Trends, peaks, dips, anomalies.\n"
+            "3. **Mental Health Context** - Interpret mental health metrics if applicable.\n"
+            "4. **Conclusions** - Precise summaries and next steps.\n"
+            "Be precise and technical."
+        )
+    }
+    prompt = prompts.get(mode, prompts["general"])
+    
+    # 4. Invoke Groq Vision model
+    vision = get_vision_service()
+    analysis_result = vision.analyze_image(pil_image, prompt)
+    
+    return {
+        "patient_id": patient_id,
+        "mode": mode,
+        "analysis": analysis_result
+    }
+
+
+

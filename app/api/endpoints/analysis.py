@@ -2,10 +2,14 @@
 app/api/endpoints/analysis.py
 FastAPI routing handlers for asynchronous text classification tasks.
 """
-from fastapi import APIRouter, HTTPException, status
+import io
+from typing import Optional
+from fastapi import APIRouter, HTTPException, status, File, UploadFile, Form
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from celery.result import AsyncResult
-from app.tasks.worker import queue_text_analysis
+from app.tasks.worker import queue_text_analysis, queue_image_scan
+from app.services.pdf_generator import PDFReportGenerator
 
 router = APIRouter()
 
@@ -19,7 +23,7 @@ class TaskStatusResponse(BaseModel):
     status: str
     result: Optional[dict] = None
 
-from typing import Optional
+
 
 @router.post("/analyze", status_code=status.HTTP_202_ACCEPTED)
 async def analyze_text(payload: TextAnalysisRequest):
@@ -64,3 +68,54 @@ async def get_task_status(task_id: str):
             "status": res.state,
             "result": None
         }
+
+@router.post("/scan", status_code=status.HTTP_202_ACCEPTED)
+async def scan_image(
+    patient_id: str = Form(...),
+    mode: str = Form("general"),
+    file: UploadFile = File(...)
+):
+    """
+    Submits a scanned sheet image for perspective correction and clinical sentiment analysis.
+    """
+    try:
+        content = await file.read()
+        hex_content = content.hex()
+        task = queue_image_scan.delay(
+            patient_id=patient_id,
+            image_bytes_hex=hex_content,
+            mode=mode
+        )
+        return {"task_id": task.id, "status": "PENDING"}
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to queue image analysis task: {exc}"
+        ) from exc
+
+class ReportGenerationRequest(BaseModel):
+    patient_id: str
+    results: dict
+
+@router.post("/report")
+async def generate_encrypted_report(payload: ReportGenerationRequest):
+    """
+    Generates a ReportLab clinical screening PDF and encrypts it using AES-256 with the patient ID.
+    """
+    try:
+        generator = PDFReportGenerator()
+        pdf_bytes = generator.generate_report(payload.patient_id, payload.results)
+        
+        # Return as a downloadable streaming response
+        return StreamingResponse(
+            io.BytesIO(pdf_bytes),
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f"attachment; filename=mindscan_report_{payload.patient_id}.pdf"
+            }
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to generate encrypted PDF report: {exc}"
+        ) from exc
