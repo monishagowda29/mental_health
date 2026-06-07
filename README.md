@@ -112,7 +112,7 @@ GROQ_API_KEY=your_groq_api_key_here
 
 ### Step 3 — Download Fine-Tuned Model Weights
 The BERT model weights are too large for standard Git tracking. 
-1. Obtain the `bert_mental_health` weights directory from the shared drive or project team.
+1. Download the fine-tuned model weights directory (`bert_mental_health`) from the [Google Drive Folder](https://drive.google.com/drive/folders/1PR_CEWSri132m3GWNtxDK2MnOZ8kHFSy?usp=drive_link).
 2. Place the folder exactly under:
 ```
 MindScan/models/bert_mental_health/
