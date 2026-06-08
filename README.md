@@ -2,15 +2,17 @@
 
 # 🧠 MindScan
 
-### AI-Powered Clinical Mental Health Screening & Multi-Patient Wellbeing Tracker
+### AI-Powered Clinical Mental Health Screening & Privacy-First Wellbeing Dashboard
 
 [![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
-[![Streamlit](https://img.shields.io/badge/Streamlit-1.57-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)](https://streamlit.io)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![React](https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev)
+[![Celery](https://img.shields.io/badge/Celery-5.x-37814A?style=for-the-badge&logo=celery&logoColor=white)](https://docs.celeryq.dev)
 [![BERT](https://img.shields.io/badge/BERT-Mental_Health-6366F1?style=for-the-badge&logo=huggingface&logoColor=white)](https://huggingface.co)
 [![Groq](https://img.shields.io/badge/Groq-Llama_4_Scout-F97316?style=for-the-badge)](https://groq.com)
 [![License](https://img.shields.io/badge/License-Academic_Research-8B5CF6?style=for-the-badge)](#disclaimer)
 
-> **Fine-tuned BERT + Groq Llama 4 Scout Vision AI · Offline Seq2Seq Translation · 100% Private & Scoped Multi-Patient Wellbeing Workspace**  
+> **Fine-tuned BERT + Groq Llama 4 Scout Vision AI · Celery Async Task Queue · Zero-Knowledge AES-GCM-256 Encryption · Offline Seq2Seq Translation for 8 Indian Languages**
 > Mysore University — School of Engineering · AI&DS Department · Academic Research Project
 
 </div>
@@ -19,159 +21,314 @@
 
 ## 📖 Overview
 
-**MindScan** is a 10/10 clinical-grade mental health screening prototype designed for clinics, therapists, and personal wellbeing self-assessments. It combines fine-tuned deep learning **BERT** classifiers and **Groq Llama 4 Scout 17B** vision models with local, private **Seq2Seq offline translation** for 8 Indian languages. 
+**MindScan** is a clinical-grade mental health screening prototype designed for clinics, therapists, and personal wellbeing self-assessments. It is built on a modern, production-grade microservices stack:
 
-MindScan is 100% offline-first and private-by-default — text analysis and translation run locally on your device, ensuring patient data sovereignty.
+- **FastAPI** backend with async task dispatch
+- **Celery** + **Redis** worker queue for non-blocking BERT and OCR inference
+- **React 19 + Zustand** glassmorphism frontend with a privacy-first design
+- **ONNX INT8-quantized BERT** for fast, CPU-efficient local inference
+- **Groq Llama 4 Scout 17B** multimodal vision for scanned document analysis
+- **Helsinki-NLP MarianMT** for offline Seq2Seq translation across 8 Indian languages
+- **AES-GCM-256 Zero-Knowledge** client-side encryption — the server never sees plaintext
 
----
-
-## ✨ Key Features & Capabilities
-
-### 🛡️ 1. Safety Crisis Care & Auto-Language Detection
-*   **Pulsating Crisis Care Card (`.crisis-card`)**: Instantly overlays a premium rose-to-crimson gradient card above the screen if suicidal/self-harm keywords are detected (English or translated), or if the BERT model outputs a depression probability $\ge 80\%$. Connects users directly to clickable 24/7 helplines (988, AASRA, Vandrevala Foundation).
-*   **Empathetic Label Softening**: Alarms are softened into supportive language (e.g. `🔴 DEPRESSION RISK` ➔ `🧠 DEPRESSIVE PATTERNS DETECTED`, `🔴 ANXIETY RISK` ➔ `⚠️ ANXIETY PATTERNS DETECTED`).
-*   **Script Auto-Detection**: Fast Unicode block scanner automatically identifies native scripts (Hindi, Kannada, Tamil, Telugu, Malayalam, Marathi, Bengali) and triggers a background toast optimization.
-
-### 📋 2. Interactive Clinical Screeners (PHQ-9 & GAD-7)
-*   **Gold-Standard Forms**: Dedicated screeners tab hosting official **PHQ-9 (Depression)** and **GAD-7 (Anxiety)** clinical questionnaires with live scoring, severity meters, and therapeutic advice.
-*   **AI vs. Self-Report Contrast Card**: Dynamic comparison panel highlighting spontaneous linguistic predictions (BERT) against structured clinical metrics for counseling preparation.
-*   **Personalized PDF/Text Report Downloader**: Stamped with patient Name/ID, date, scores, severity, and clinical disclaimers.
-
-### 👤 3. Scoped Multi-Patient Wellbeing Dashboard
-*   **Private Persistent Logging**: History logs (`outputs/history.json`) are scoped using the **Patient Name / ID** as a primary key. Multiple patients can share the same local dashboard without database leaks.
-*   **Wellbeing trend Line Charts**: Plots chronological risk levels (`0=Low Risk, 1=Anxiety, 2=Depressive`) using styled dark-mode Seaborn graphs.
-*   **Data Sovereignty**: Clean CSV history export and single-click secure erase controls to wipe private patient logs.
-
-### 🧬 4. Direct Seq2Seq Translation & Sentiment Calibration (Pillar 4)
-*   **Futureproof Seq2Seq Translation**: Uses direct Marian Seq2Seq AutoModels (`Helsinki-NLP/opus-mt-mul-en`) rather than legacy pipeline wrappers, avoiding `"Unknown task translation"` crashes in `transformers` v5.0+.
-*   **Clinical Sentiment Calibration**: Employs rule-based overrides for general-domain wellness sentences (e.g. `"i am doing good feeling nice"`) to bypass BERT domain bias, mapping them to `normal` at **90% confidence** and preventing false alarms.
+MindScan is 100% **private-by-default** — text analysis and translations run locally on-device; raw journal text never touches the server disk.
 
 ---
 
-## 🏗️ Architecture Flow
+## ✨ Feature Overview
+
+### 🛡️ 1. Automatic Crisis Detection & Emergency Support
+- **Real-time keyword scanning** across all journal input (English + all 8 Indian languages): detects `suicide`, `self-harm`, `die`, `end my life`, `cutting`, `hanging`, and similar indicators
+- **PHQ-9 self-harm trigger**: crisis banner auto-activates if Question 9 is answered above zero
+- **BERT score threshold trigger**: activates if the latest journal analysis returns depression probability ≥ 50%
+- **Pulsating emergency banner** with 24/7 crisis helpline deep-links:
+  - 📞 Tele-MANAS: `14416`
+  - 📞 TISS iCall: `9152987821`
+  - 📞 AASRA: `9820466726`
+  - 📞 988 Suicide & Crisis Lifeline (US)
+
+---
+
+### 📓 2. Zero-Knowledge Encrypted Journal Analytics
+- **Client-side AES-GCM-256 encryption** via Web Crypto API — passphrase-derived with PBKDF2 (100,000 iterations, SHA-256)
+- **4-segment passphrase strength meter** (Weak / Fair / Strong / Excellent) with per-character entropy scoring; submission blocked if passphrase is too weak
+- **Live character counter** on the journal textarea (turns amber at 2,000, red at 2,400, hard-capped at 2,500)
+- **Ctrl+Enter** keyboard shortcut to submit
+- **Optimistic UI updates** — entry appears instantly with a PENDING badge, showing a live elapsed timer (`Analyzing… 12s`) while the Celery worker processes the task
+- **Animated score breakdown pills** — emerald/amber/rose progress bars per journal card showing Normal / Anxiety / Depression confidence scores
+- **Wellbeing Risk Severity Timeline** — SVG polyline chart with interactive hover tooltips (date, prediction label, D/A/N scores) for every plotted data point
+- **Distribution stats with trend arrows** — session-over-session `↑` / `↓` / `—` comparison for Wellness, Anxious, and Depressive pattern percentages
+- **Wipe History two-step confirmation modal** — prevents accidental single-click data erasure; displays patient name and irreversibility warning
+- **Encrypted PDF export** — full journal history report with timestamped entries, confidence scores, and clinical disclaimers
+
+---
+
+### 📋 3. Interactive Clinical Screeners (PHQ-9 & GAD-7)
+- **Gold-standard questionnaires** — official **PHQ-9** (9-item depression screener) and **GAD-7** (7-item anxiety screener)
+- **Screener progress bar** — gradient fill bar showing `X of N answered` and `% complete` in real time
+- **Question completion state** — answered questions highlighted with indigo number badge; calculate button disabled and shows remaining count until all questions are answered
+- **Reset button** — one-click to clear all answers and start over on either screener
+- **Severity outcome card** — colour-coded result (Severe / Moderate / Mild / Minimal) with a clinical action recommendation
+- **AI vs. Self-Report contrast panel** — compares PHQ-9/GAD-7 severity against the latest BERT spontaneous text prediction
+- **Crisis escalation** — PHQ-9 Question 9 (self-harm thoughts) and total score ≥ 10 both trigger the emergency crisis banner
+- **Encrypted PDF screener report** — exports a full summary including per-question answers, scores, severity, and both PHQ-9 + GAD-7 results in one document
+
+---
+
+### 📷 4. Scanned Document OCR & Vision Analysis
+- **OpenCV perspective correction** — adaptive warp, binarization, and deskew pipeline for handwritten or printed scanned pages
+- **Groq Llama 4 Scout 17B** multimodal vision inference for three analysis modes:
+  - `🌐 General Visual Tone` — general document tone and emotional context
+  - `📱 Social Media Sentiment` — social media screenshot emotional analysis
+  - `📊 Scientific Chart Analysis` — interpretation of clinical charts or graphs
+- **Rich empty/drop state** — illustrated drop zone with hover scale animation and descriptive copy; no bare upload box
+- **Remove button** on uploaded images — clear and re-upload without page reload
+- **Celery async OCR dispatch** — non-blocking task with live `Processing via Celery…` status badge
+- **Toast success/failure notification** on scan completion
+- **Encrypted PDF export** of scan results
+
+---
+
+### 🔐 5. Zero-Knowledge Security Architecture
+- **Client-side only encryption**: `encryptText()` and `decryptText()` run entirely in the browser using the Web Crypto API
+- **Salt + IV per-entry randomness**: each journal entry gets a unique 16-byte PBKDF2 salt and 12-byte AES-GCM IV
+- **LocalStorage scoped per patient**: `mindscan_history_{patientId}` — multiple users on the same device have isolated histories
+- **Decrypted text never persisted**: `saveHistory()` strips `decryptedText` before writing to localStorage
+- **Server-side ephemeral only**: FastAPI processes text in-memory; no raw text, images, or encryption keys are written to disk
+
+---
+
+### 🌐 6. Multilingual Support (8 Indian Languages)
+| Language | Script | ISO Code |
+|----------|--------|----------|
+| Hindi | देवनागरी | `hi` |
+| Kannada | ಕನ್ನಡ | `kn` |
+| Tamil | தமிழ் | `ta` |
+| Telugu | తెలుగు | `te` |
+| Malayalam | മലയാളം | `ml` |
+| Marathi | मराठी | `mr` |
+| Bengali | বাংলা | `bn` |
+| English | Latin | `en` / `auto` |
+
+Uses **Helsinki-NLP `opus-mt-mul-en`** MarianMT AutoModels directly (bypasses legacy pipeline wrappers; compatible with `transformers` v5.0+). Language can be manually selected or auto-detected.
+
+---
+
+### 📄 7. Encrypted PDF Clinical Report Generation
+All three report types (Journal, Screener, Document Scan) are generated server-side via `reportlab` and returned as a binary blob download. Reports include:
+- Patient ID, generation timestamp, assessment type
+- **Colour-coded status box**: 🔴 Severe → 🟡 Moderate/Mild → 🟢 Minimal
+- Full processed text, confidence scores, and clinical disclaimers
+- Watermarked as "AI-Assisted Screening — Not a Medical Diagnosis"
+
+---
+
+## 🏗️ System Architecture
 
 ```
-User Multilingual Input (Any script U+0900–U+0D7F)
-         │
-         ▼ (Unicode Auto-Detector)
-┌──────────────────────────────────────────┐
-│ Helsinki-NLP opus-mt-mul-en AutoModel    │ ← Inferences Seq2Seq locally offline
-│ (Bypasses legacy v5.x pipeline wrappers) │
-└──────────────────┬───────────────────────┘
-                   │
-                   ▼ Translated English Text
-┌──────────────────────────────────────────┐
-│ Clinical Sentiment Calibration Guard     │ ← Bypasses model for pure wellness text
-│ (Wellness terms + 0 Clinical terms)      │
-└──────────────────┬───────────────────────┘
-                   │
-                   ▼ Standard Clinical Statements
-┌──────────────────────────────────────────┐
-│ Fine-tuned BERT Classifier (CPU/GPU)     │
-│ [Index 0: Depression, 1: Normal, 2: Anx] │
-└──────────────────┬───────────────────────┘
-                   │
-                   ▼ Dynamic Frontend Rendering
-┌──────────────────────────────────────────┐
-│ 👤 Scoped Patient Profiles & Dashboard    │
-│ 📋 GAD-7 & PHQ-9 Clinical Screeners       │
-│ 🖼️ Groq Llama 4 Scout Vision Analysis     │
-└──────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────┐
+│                         React 19 + Zustand                         │
+│  ┌──────────────┐  ┌──────────────────┐  ┌───────────────────────┐│
+│  │Journal Tab   │  │Clinical Screeners│  │Document Scan (OCR)    ││
+│  │AES-GCM-256   │  │PHQ-9 · GAD-7     │  │OpenCV + Llama 4 Scout ││
+│  │ZK Encryption │  │PDF Export        │  │Vision Analysis        ││
+│  └──────┬───────┘  └────────┬─────────┘  └──────────┬────────────┘│
+└─────────┼───────────────────┼────────────────────────┼────────────┘
+          │    HTTP / REST     │                        │
+          ▼                   ▼                        ▼
+┌────────────────────────────────────────────────────────────────────┐
+│                    FastAPI (uvicorn, port 8000)                     │
+│   /api/analyze  ·  /api/scan  ·  /api/tasks/{id}  ·  /api/report   │
+└─────────────────────────────┬──────────────────────────────────────┘
+                              │  Task Dispatch
+                              ▼
+┌────────────────────────────────────────────────────────────────────┐
+│             Celery Worker  ←→  Redis Broker (port 6379)             │
+│  ┌─────────────────────┐    ┌──────────────────────────────────┐   │
+│  │ analyze_text task   │    │ scan_document task               │   │
+│  │  • Helsinki-NLP NMT │    │  • OpenCV deskew + binarize      │   │
+│  │  • Calibration guard│    │  • Groq Llama 4 Scout vision     │   │
+│  │  • BERT INT8 ONNX   │    │  • Ephemeral file shred          │   │
+│  └─────────────────────┘    └──────────────────────────────────┘   │
+└────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
 ## 🚀 Local Setup & Quick Start
 
-Follow these step-by-step instructions to get your local environment configured and running:
-
 ### 📋 Prerequisites
-1.  **Python 3.12**: [Download Python 3.12.x](https://www.python.org/downloads/release/python-3120/) (Add to system PATH).
-2.  **Git**: [Download Git](https://git-scm.com/downloads).
-3.  **Groq API Key** (Free): Get a key at [console.groq.com](https://console.groq.com) (for Llama 4 Vision analysis only).
+1. **Python 3.12** — [Download](https://www.python.org/downloads/release/python-3120/) (add to PATH)
+2. **Node.js 20+** — [Download](https://nodejs.org/en/download) (for the React frontend)
+3. **Redis** — [Download for Windows](https://github.com/tporadowski/redis/releases) or run via Docker: `docker run -d -p 6379:6379 redis`
+4. **Groq API Key** (free) — [console.groq.com](https://console.groq.com) (required for OCR/Vision tab only)
 
 ---
 
 ### Step 1 — Clone the Repository
-Open a terminal (PowerShell or Command Prompt on Windows) and run:
 ```bash
 git clone https://github.com/AryaPartha/MindScan.git
-cd MindScan
+cd MindScan/mental_health_bert
 ```
 
 ---
 
-### Step 2 — Configure Environment Variables (`.env`)
-Create a file named `.env` in the root folder of the project (`MindScan/.env`) and add your Groq key:
+### Step 2 — Configure Environment Variables
+Create `.env` in `mental_health_bert/`:
 ```ini
-# MindScan Environment Configuration
+# MindScan Backend Environment
 GROQ_API_KEY=your_groq_api_key_here
 ```
 
 ---
 
 ### Step 3 — Download Fine-Tuned Model Weights
-The BERT model weights are too large for standard Git tracking. 
-1. Download the fine-tuned model weights directory (`bert_mental_health`) from the [Google Drive Folder](https://drive.google.com/drive/folders/1PR_CEWSri132m3GWNtxDK2MnOZ8kHFSy?usp=drive_link).
-2. Place the folder exactly under:
+The BERT model weights are stored on Google Drive (too large for Git).
+1. Download `bert_mental_health/` from the [Google Drive Folder](https://drive.google.com/drive/folders/1PR_CEWSri132m3GWNtxDK2MnOZ8kHFSy?usp=drive_link)
+2. Place it at:
 ```
-MindScan/models/bert_mental_health/
+mental_health_bert/models/bert_mental_health/
+  ├── config.json
+  ├── model.safetensors
+  ├── tokenizer_config.json
+  └── tokenizer.json
 ```
-Verify that the following files are present inside that directory:
-- `config.json`
-- `model.safetensors`
-- `tokenizer_config.json`
-- `tokenizer.json`
 
 ---
 
-### Step 4 — Run One-Time Automated Setup
-Double-click `setup.bat` in the root directory, or run it in your terminal:
+### Step 4 — Install Backend Dependencies
 ```bash
-setup.bat
+python -m venv venv
+venv\Scripts\activate          # Windows
+# source venv/bin/activate     # macOS/Linux
+pip install -r requirements.txt
 ```
-*This script will:*
-- Create a clean local Python virtual environment (`venv/`)
-- Upgrade `pip` to the latest version
-- Install all heavy dependencies (`torch`, `transformers`, `streamlit`, `pandas`, `sacremoses`, etc.)
 
 ---
 
-### Step 5 — Launch the MindScan Application
-Double-click `run.bat` in the root directory, or run it in your terminal:
+### Step 5 — Install Frontend Dependencies
 ```bash
-run.bat
+cd client
+npm install
+cd ..
 ```
-Streamlit will compile modules and automatically launch a new browser window at:
-**[http://localhost:8501](http://localhost:8501)**
+
+---
+
+### Step 6 — Launch All Services
+
+Open **three separate terminals** in `mental_health_bert/`:
+
+**Terminal 1 — FastAPI Backend**
+```bash
+venv\Scripts\uvicorn app.main:app --host 0.0.0.0 --port 8000
+```
+
+**Terminal 2 — Celery Worker**
+```bash
+venv\Scripts\celery -A app.tasks.worker.celery_app worker --loglevel=info -P solo
+```
+
+**Terminal 3 — React Frontend**
+```bash
+cd client
+npm run dev
+```
+
+Open **[http://localhost:5173](http://localhost:5173)** in your browser.
 
 ---
 
 ## 🧪 Running Automated Unit Tests
-To verify all models, cache engines, offline Seq2Seq pipelines, and calibration overrides operate successfully:
 
-1.  Activate the virtual environment:
-    ```bash
-    venv\Scripts\activate
-    ```
-2.  Run the test suite:
-    ```bash
-    python tests/run_tests.py
-    ```
-    *All **17 tests** (BERT Singleton, Sentiment overrides, Helsinki AutoModel wrappers, cached translation LRU, vision completions) should run and return `[SUCCESS] All test suites completed successfully!`.*
+```bash
+# Activate venv first
+venv\Scripts\activate
+
+# Run full test suite
+$env:PYTHONPATH="."; venv\Scripts\pytest tests -v
+```
+
+**Expected output — 22/22 tests passing:**
+```
+tests/test_bert.py            ······   6 passed  (singleton, inference, calibration)
+tests/test_phase3.py          ·····    5 passed  (PDF, OCR pipeline, ephemeral shred)
+tests/test_translation.py     ······   6 passed  (Helsinki-NLP, LRU cache, fallback)
+tests/test_vision.py          ·····    5 passed  (Groq vision, RGBA→RGB, API errors)
+
+========================= 22 passed in ~11s =========================
+```
+
+> All heavy model loaders (BERT, MarianMT, Groq) are globally mocked in `tests/conftest.py` — tests run without GPU, network access, or model downloads.
 
 ---
 
-## 📊 Model Performance Metrics
-The BERT classifier was fine-tuned on the Kaggle Reddit Mental Health dataset (~20,000+ records) and is optimized for the following clinical categories:
+## 🔒 CI/CD Safety: Three-Tier ID Generation
 
-| Class Label | Model Output Index | Training Target Alignment |
-|---|---|---|
-| **Depression** | Index 0 | High-arousal bipolar, major depressive symptoms |
-| **Normal** | Index 1 | General-domain neutral thoughts & mental wellness |
-| **Anxiety** | Index 2 | Panic attacks, social phobias, stress indicators |
+To ensure zero crashes in headless GitHub Actions runners and JSDOM test environments, all ephemeral frontend entry IDs are generated via `client/src/utils/generateId.js` — a crash-safe three-tier fallback:
 
-*Detailed training reports, confusion matrices, and Seaborn curves are generated automatically inside the `outputs/` folder.*
+| Tier | Method | Environment |
+|------|--------|-------------|
+| **1** | `window.crypto.randomUUID()` | Chrome 92+, Firefox 95+, Node 19+ |
+| **2a** | `window.crypto.getRandomValues()` + RFC-4122 assembly | Chrome 11+, Safari 7+, IE 11+ |
+| **2b** | `globalThis.crypto.randomUUID()` | Vitest Node mode |
+| **3** | `Math.random()` UUID-shape | Headless JSDOM, legacy CI runners |
+
+The function is fully wrapped in `try/catch` — it **never throws** and **always returns a string**.
+
+---
+
+## 📊 Model Performance
+
+The BERT classifier was fine-tuned on the Kaggle Reddit Mental Health dataset (~20,000+ records):
+
+| Class | Index | Description |
+|-------|-------|-------------|
+| **Depression** | 0 | Major depressive symptoms, bipolar indicators |
+| **Normal** | 1 | Neutral thoughts, general mental wellness |
+| **Anxiety** | 2 | Panic attacks, social phobias, stress indicators |
+
+**Clinical Sentiment Calibration Guard**: Rule-based overrides map pure wellness sentences (e.g. `"feeling good today"`) to `normal` at 90% confidence, preventing false-positive depression alarms from BERT's domain bias.
+
+---
+
+## 🗂️ Project Structure
+
+```
+mental_health_bert/
+├── app/
+│   ├── api/endpoints/
+│   │   └── analysis.py         # FastAPI route handlers
+│   ├── services/
+│   │   ├── bert_classifier.py  # ONNX INT8 BERT inference singleton
+│   │   ├── translation.py      # Helsinki-NLP MarianMT service
+│   │   ├── vision.py           # Groq Llama 4 Scout vision service
+│   │   ├── image_processor.py  # OpenCV deskew + binarization
+│   │   └── pdf_generator.py    # ReportLab encrypted PDF generator
+│   ├── tasks/
+│   │   └── worker.py           # Celery task definitions
+│   └── main.py                 # FastAPI app + CORS configuration
+├── client/                     # React 19 + Vite frontend
+│   ├── src/
+│   │   ├── App.jsx             # Main application (tabs, state, rendering)
+│   │   ├── index.css           # Glassmorphism design system + animations
+│   │   ├── services/
+│   │   │   └── cryptoService.js    # AES-GCM-256 encrypt/decrypt
+│   │   ├── store/
+│   │   │   └── useJournalStore.js  # Zustand state + polling + persistence
+│   │   └── utils/
+│   │       └── generateId.js   # Three-tier CI-safe UUID generator
+│   └── index.html
+├── models/
+│   └── bert_mental_health/     # Fine-tuned weights (download separately)
+├── tests/
+│   ├── conftest.py             # Global pytest mocks (BERT, NMT, Groq)
+│   ├── test_bert.py
+│   ├── test_phase3.py
+│   ├── test_translation.py
+│   └── test_vision.py
+└── requirements.txt
+```
 
 ---
 
@@ -179,13 +336,13 @@ The BERT classifier was fine-tuned on the Kaggle Reddit Mental Health dataset (~
 
 MindScan is a **research prototype** developed for academic purposes at the School of Engineering, University of Mysore (AI&DS Department).
 
-- ❌ **NOT** a certified diagnostic medical device.
-- ❌ **NOT** a replacement for professional clinical counseling or psychiatric guidance.
-- ✅ Developed solely for educational and research awareness.
+- ❌ **NOT** a certified diagnostic medical device
+- ❌ **NOT** a replacement for professional clinical counseling or psychiatric guidance
+- ✅ Developed solely for educational and research awareness
 
 **If you or someone you know is in crisis, please seek immediate help. Confidential support is available 24/7:**
-*   🇮🇳 **India:** Call **9152987821** (iCall) or **1860-2662-345** (Vandrevala Foundation)
-*   🇺🇸 **US/Canada:** Call or Text **988** (Suicide & Crisis Lifeline)
+- 🇮🇳 **India:** **14416** (Tele-MANAS) · **9152987821** (iCall) · **9820466726** (AASRA)
+- 🇺🇸 **US/Canada:** Call or Text **988** (Suicide & Crisis Lifeline)
 
 ---
 
