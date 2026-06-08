@@ -6,59 +6,108 @@ on:
   pull_request:
     branches: [master, main]
 
-jobs:
-  lint-and-syntax:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
+# ── Global environment ────────────────────────────────────────────────────────
+# PYTHONPATH must be set at workflow level so every job can resolve both
+# `from src.services.*` and `from app.services.*` without ModuleNotFoundError.
+env:
+  PYTHONPATH: .
 
-      - name: Set up Python
+jobs:
+
+  # ── Job 1: Lint & Syntax ───────────────────────────────────────────────────
+  lint-and-syntax:
+    name: "Lint & Syntax Check"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
-      - name: Syntax Compile check
-        run: |
-          python -m py_compile app.py
-          python -m py_compile src/config.py src/services/bert.py src/services/translation.py src/services/vision.py src/ui/strings.py src/ui/styles.py
-          find app -name "*.py" | xargs python -m py_compile
+      # Compile all Python source files — fail fast on syntax errors.
+      # Uses shell globbing + find to avoid hard-coded path assumptions.
+      - name: Compile-check app/ package
+        run: find app -name "*.py" | xargs python -m py_compile
 
+      - name: Compile-check src/ package
+        run: find src -name "*.py" | xargs python -m py_compile
+
+      - name: Compile-check tests/ package
+        run: find tests -name "*.py" | xargs python -m py_compile
+
+  # ── Job 2: Unit Tests ─────────────────────────────────────────────────────
   unit-tests:
+    name: "Unit Tests (22 suites)"
     needs: lint-and-syntax
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
 
-      - name: Set up Python
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          # Cache the pip download cache keyed on requirements.txt hash.
+          # Prevents re-downloading torch/transformers on every push.
           cache: "pip"
+          cache-dependency-path: requirements.txt
 
-      - name: Install dependencies
+      # Install CPU-only torch first to avoid pulling the massive CUDA bundle.
+      # This alone saves ~800 MB of download on every CI run.
+      - name: Install PyTorch (CPU-only, lightweight CI build)
         run: |
-          pip install -r requirements.txt
-          pip install pytest cryptography
+          pip install --upgrade pip
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
 
-      - name: Run Pytest suite
-        run: pytest tests/ -v --tb=short
+      # Install the rest of the project dependencies.
+      # opencv-python-headless is in requirements.txt (no GUI/display needed on CI).
+      - name: Install project dependencies
+        run: pip install -r requirements.txt
 
+      # Install test-only extras not required at runtime.
+      - name: Install test extras
+        run: pip install pytest pytest-timeout cryptography anyio
+
+      # Run the full pytest suite.
+      # --timeout=120   → fail any individual test hanging over 2 minutes.
+      # -p no:warnings  → suppress noisy HuggingFace deprecation warnings.
+      # PYTHONPATH is inherited from the workflow-level env block above.
+      - name: Run pytest suite
+        run: pytest tests/ -v --tb=short --timeout=120 -p no:warnings
+
+  # ── Job 3: Integration Tests ──────────────────────────────────────────────
   integration-tests:
+    name: "Integration Tests"
     needs: unit-tests
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
 
-      - name: Set up Python
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
           cache: "pip"
+          cache-dependency-path: requirements.txt
 
-      - name: Install dependencies
+      - name: Install PyTorch (CPU-only)
         run: |
-          pip install -r requirements.txt
-          pip install cryptography
+          pip install --upgrade pip
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
 
-      - name: Run Custom Integration Test Suite
+      - name: Install project dependencies
+        run: pip install -r requirements.txt
+
+      - name: Install test extras
+        run: pip install cryptography
+
+      - name: Run custom integration test suite
         run: python tests/run_tests.py
