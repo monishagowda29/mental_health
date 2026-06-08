@@ -2,9 +2,14 @@
  * client/src/store/useJournalStore.js
  * Zustand state store for local mental health screening histories.
  * Handles state transitions, LocalStorage isolation, optimistic UI updates, and backend polling.
+ *
+ * ID Generation: Uses the three-tier crash-safe generateId() helper instead of
+ * raw crypto.randomUUID() calls, ensuring the store operates correctly in
+ * headless CI/CD runners, JSDOM test environments, and older browsers.
  */
 import { create } from 'zustand';
 import { encryptText, decryptText } from '../services/cryptoService';
+import { generateId } from '../utils/generateId';
 
 const BACKEND_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -89,9 +94,9 @@ export const useJournalStore = create((set, get) => ({
       return;
     }
 
-    const tempId = typeof crypto !== 'undefined' && crypto.randomUUID 
-      ? crypto.randomUUID() 
-      : Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+    // Three-tier crash-safe ID (window.crypto.randomUUID → getRandomValues → Math.random).
+    // Safe for headless GitHub Actions runners, JSDOM test environments, and all browsers.
+    const tempId = generateId();
     const timestamp = new Date().toISOString();
 
     // 1. Client-Side Encryption

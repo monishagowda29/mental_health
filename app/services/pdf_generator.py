@@ -150,9 +150,9 @@ class PDFReportGenerator:
         
         pred_label = results.get("prediction", "normal").upper()
         # Choose colored status box based on prediction
-        if "DEPRESSION" in pred_label:
+        if "SEVERE" in pred_label or pred_label == "DEPRESSION":
             status_color = colors.HexColor("#ef4444")  # Red
-        elif "ANXIETY" in pred_label:
+        elif "MODERATE" in pred_label or "MILD" in pred_label or pred_label == "ANXIETY":
             status_color = colors.HexColor("#f59e0b")  # Amber
         else:
             status_color = colors.HexColor("#10b981")  # Green
