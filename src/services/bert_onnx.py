@@ -3,6 +3,7 @@ src/services/bert_onnx.py
 Thread-safe singleton service for quantized BERT text classification.
 """
 import logging
+import os
 import threading
 from typing import Optional
 import numpy as np
@@ -117,4 +118,3 @@ class BERTOnnxService(ONNXBaseService):
         logger.debug("Quantized BERT prediction: %s (probs=%s)", pred_label, probs.tolist())
         return pred_label, probs
 
-import os

@@ -107,8 +107,8 @@ class TranslationOnnxService:
         if not text or not text.strip():
             return ""
 
-        prefix = LANG_PREFIXES.get(source_lang, "") if source_lang != "auto" else ""
-        return self._cached_translate(prefix + text)
+        # Use cached internal translation
+        return self._cached_translate(text)
 
     @lru_cache(maxsize=512)
     def _cached_translate(self, prefixed_text: str) -> str:

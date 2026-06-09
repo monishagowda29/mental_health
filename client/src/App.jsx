@@ -226,10 +226,10 @@ function App() {
   const [hoveredPoint, setHoveredPoint] = useState(null);
 
   // ── Derived Values ────────────────────────────────────────────────────────
-  const phq9Score    = phq9Answers.map(a => Math.max(0, a)).reduce((a, b) => a + b, 0);
-  const gad7Score    = gad7Answers.map(a => Math.max(0, a)).reduce((a, b) => a + b, 0);
-  const phq9Answered = phq9Answers.filter(a => a >= 0).length;
-  const gad7Answered = gad7Answers.filter(a => a >= 0).length;
+  const phq9Score    = useMemo(() => phq9Answers.map(a => Math.max(0, a)).reduce((a, b) => a + b, 0), [phq9Answers]);
+  const gad7Score    = useMemo(() => gad7Answers.map(a => Math.max(0, a)).reduce((a, b) => a + b, 0), [gad7Answers]);
+  const phq9Answered = useMemo(() => phq9Answers.filter(a => a >= 0).length, [phq9Answers]);
+  const gad7Answered = useMemo(() => gad7Answers.filter(a => a >= 0).length, [gad7Answers]);
 
   const passphraseStrength = useMemo(() => getPassphraseStrength(passphrase), [passphrase]);
 

@@ -146,9 +146,8 @@ class TranslationService:
             logger.warning("Empty or whitespace-only text — returning empty string.")
             return ""
 
-        # Use cached internal translation (keyed on text + prefix)
-        prefix = LANG_PREFIXES.get(source_lang, "") if source_lang != "auto" else ""
-        return self._cached_translate(prefix + text)
+        # Use cached internal translation
+        return self._cached_translate(text)
 
     @lru_cache(maxsize=512)
     def _cached_translate(self, prefixed_text: str) -> str:
