@@ -52,18 +52,32 @@ class BERTOnnxService(ONNXBaseService):
 
         cleaned = text.lower().strip()
 
-        # Wellness vs Clinical lexicon calibration override
+        # Wellness vs Clinical lexicon calibration override.
+        # This guard catches common HuggingFace translation outputs for
+        # wellness phrases in Indian languages (e.g. "I am well", "I'm alright").
         WELLNESS_WORDS = {
+            # Direct positive-state words
             "good", "great", "happy", "nice", "excellent", "wonderful", "beautiful", "calm",
             "peaceful", "perfect", "amazing", "content", "cheerful", "joy", "fine", "healthy",
-            "doing well", "feeling good", "doing good", "feeling nice", "glad", "blessed"
+            "glad", "blessed", "well", "alright", "okay", "ok", "comfortable", "relaxed",
+            "relieved", "joyful", "thankful", "grateful", "positive", "refreshed",
+            "energetic", "lively", "optimistic", "pleased", "delighted", "satisfied",
+            "brilliant", "fantastic", "superb", "splendid", "elated", "better",
+            # Common phrase fragments from HuggingFace NMT output
+            "doing well", "feeling good", "doing good", "feeling nice", "feeling well",
+            "feeling great", "feeling happy", "feeling fine", "feeling better",
+            "am well", "am good", "am fine", "am okay", "am alright", "am happy",
+            "i'm well", "i'm good", "i'm fine", "i'm okay", "i'm alright", "i'm happy",
+            "im well", "im good", "im fine", "im okay", "im alright",
+            "doing great", "doing fine", "doing okay",
         }
         CLINICAL_KEYWORDS = {
             "anxious", "anxiety", "worry", "worried", "panic", "panicked", "fear", "scared",
             "depressed", "depression", "sad", "sadness", "empty", "hopeless", "hopelessness",
             "suicide", "suicidal", "kill", "die", "death", "hurt", "pain", "cutting", "harm",
             "lonely", "darkness", "dark", "cry", "crying", "hate", "scary", "shake", "shaking",
-            "stress", "stressed", "bipolar", "mental health", "struggle", "struggling"
+            "stress", "stressed", "bipolar", "mental health", "struggle", "struggling",
+            "worthless", "failure", "overwhelmed", "numb", "exhausted", "trapped",
         }
 
         has_wellness = any(w in cleaned for w in WELLNESS_WORDS)

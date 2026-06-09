@@ -80,9 +80,18 @@ class TranslationOnnxService:
                     logger.info("Initializing ONNX translation model from %s ...", model_dir)
                     try:
                         self._tokenizer = AutoTokenizer.from_pretrained(model_dir)
+                        # Explicitly pass file names because the folder uses the legacy
+                        # split-decoder layout (encoder_model.onnx + decoder_model.onnx +
+                        # decoder_with_past_model.onnx) rather than the merged single-file
+                        # layout (decoder_model_merged.onnx) that optimum >= 1.14 expects
+                        # by default. Without this, optimum raises a FileNotFoundError and
+                        # falls back to a CPU stub that outputs garbage dots.
                         self._model = ORTModelForSeq2SeqLM.from_pretrained(
                             model_dir,
-                            provider="CPUExecutionProvider"
+                            provider="CPUExecutionProvider",
+                            encoder_file_name="encoder_model.onnx",
+                            decoder_file_name="decoder_model.onnx",
+                            decoder_with_past_file_name="decoder_with_past_model.onnx",
                         )
                         logger.info("ONNX translation model loaded successfully.")
                     except Exception as exc:
@@ -106,14 +115,26 @@ class TranslationOnnxService:
         try:
             self._load_model()
             logger.info("Translating text (ONNX) length: %d chars.", len(prefixed_text))
-            
+
             inputs = self._tokenizer(prefixed_text, return_tensors="pt", padding=True, truncation=True)
-            
+
             # Run model generation utilizing ORT
             generated_tokens = self._model.generate(**inputs, num_beams=6, max_length=512)
             translated = self._tokenizer.batch_decode(generated_tokens, skip_special_tokens=True)[0]
-            
+
             logger.info("Translation done (ONNX). Output length: %d chars.", len(translated))
+
+            # ── Output quality guard ──────────────────────────────────────────
+            # If the model produces garbage (all dots / punctuation / spaces,
+            # fewer than 2 alphabetic characters) it means the ONNX session
+            # silently failed — raise so safe_translate falls back to HuggingFace.
+            alpha_chars = sum(1 for c in translated if c.isalpha())
+            if alpha_chars < 2:
+                raise RuntimeError(
+                    f"ONNX translation produced garbage output (alpha_chars={alpha_chars}): "
+                    f"{translated!r:.80}"
+                )
+
             return translated
         except Exception as exc:
             logger.exception("Translation ONNX forward pass failed: %s", exc)
