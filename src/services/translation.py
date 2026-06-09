@@ -49,10 +49,10 @@ class TranslationService:
         "ta": "Tamil (தமிழ்)",
         "te": "Telugu (తెలుగు)",
         "ml": "Malayalam (മലയാളം)",
-        "mr": "Marathi (มరాಠಿ)",
+        "mr": "Marathi (मराठी)",
         "bn": "Bengali (বাংলা)",
         "gu": "Gujarati (ગુજરાતી)",
-        "pa": "Punjabi (ਪੰਜਾਬಿ)",
+        "pa": "Punjabi (ਪੰਜਾਬੀ)",
         "ur": "Urdu (اردو)",
         "or": "Odia (ଓଡ଼ିଆ)",
     }
@@ -146,8 +146,14 @@ class TranslationService:
             logger.warning("Empty or whitespace-only text — returning empty string.")
             return ""
 
+        # Prepend the Helsinki-NLP language prefix so that opus-mt-mul-en
+        # knows which source language it is translating FROM.  Without this
+        # prefix the model silently produces garbage / wrong-language output.
+        prefix = LANG_PREFIXES.get(source_lang, "")
+        prefixed_text = prefix + text if prefix else text
+
         # Use cached internal translation
-        return self._cached_translate(text)
+        return self._cached_translate(prefixed_text)
 
     @lru_cache(maxsize=512)
     def _cached_translate(self, prefixed_text: str) -> str:

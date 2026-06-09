@@ -36,16 +36,16 @@ class TranslationOnnxService:
     """
     SUPPORTED_LANGUAGES: Dict[str, str] = {
         "kn": "Kannada (ಕನ್ನಡ)",
-        "hi": "Hindi (ಹಿन्दी)",
+        "hi": "Hindi (हिन्दी)",
         "ta": "Tamil (தமிழ்)",
-        "te": "Telugu (ತೆಲೂಗು)",
+        "te": "Telugu (తెలుగు)",
         "ml": "Malayalam (മലയാളം)",
         "mr": "Marathi (मराठी)",
         "bn": "Bengali (বাংলা)",
         "gu": "Gujarati (ગુજરાતી)",
-        "pa": "Punjabi (ਪੰਜਾਬಿ)",
+        "pa": "Punjabi (ਪੰਜਾਬੀ)",
         "ur": "Urdu (اردو)",
-        "or": "Odia (ଓಡ଼ಿଆ)",
+        "or": "Odia (ଓಡ଼ిଆ)",
     }
 
     _instance: Optional["TranslationOnnxService"] = None
@@ -107,8 +107,14 @@ class TranslationOnnxService:
         if not text or not text.strip():
             return ""
 
+        # Prepend the Helsinki-NLP language prefix so that opus-mt-mul-en
+        # knows which source language it is translating FROM.  Without this
+        # prefix the model silently produces garbage / wrong-language output.
+        prefix = LANG_PREFIXES.get(source_lang, "")
+        prefixed_text = prefix + text if prefix else text
+
         # Use cached internal translation
-        return self._cached_translate(text)
+        return self._cached_translate(prefixed_text)
 
     @lru_cache(maxsize=512)
     def _cached_translate(self, prefixed_text: str) -> str:

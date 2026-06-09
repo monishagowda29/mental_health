@@ -121,6 +121,10 @@ All three report types (Journal, Screener, Document Scan) are generated server-s
 - Full processed text, confidence scores, and clinical disclaimers
 - Watermarked as "AI-Assisted Screening — Not a Medical Diagnosis"
 
+> **🔑 PDF Password:** All generated reports are encrypted with **AES-256**. When your PDF viewer prompts for a password, enter **your Patient ID / Name** — exactly as typed in the *"Active Patient Record Name / ID"* sidebar field (case-sensitive, spaces included).
+>
+> **Example:** Patient ID = `Guest Patient` → PDF password = `Guest Patient`
+
 ---
 
 ## 🏗️ System Architecture
@@ -329,6 +333,50 @@ mental_health_bert/
 │   └── test_vision.py
 └── requirements.txt
 ```
+
+---
+
+## 🛠️ Troubleshooting
+
+### ❓ "What is the PDF password?"
+All downloaded reports are **AES-256 encrypted**. The password is your **Patient ID / Name** exactly as entered in the sidebar field.
+
+| Sidebar Field Value | PDF Password |
+|---|---|
+| `Guest Patient` | `Guest Patient` |
+| `PAT-1082` | `PAT-1082` |
+| `John Doe` | `John Doe` |
+
+> ⚠️ The password is **case-sensitive** and **space-sensitive**. Copy it exactly from the sidebar.
+
+---
+
+### ❓ "Failed to dispatch document scan task"
+This usually means **another application is using port 8000** and intercepting requests before MindScan can handle them.
+
+**Fix:**
+1. Find the conflicting process:
+   ```bash
+   netstat -ano | findstr ":8000"
+   ```
+2. Kill it (replace `<PID>` with the PID you find):
+   ```bash
+   taskkill /PID <PID> /F
+   ```
+3. Restart the MindScan backend (Terminal 1 from Step 6 above).
+
+---
+
+### ❓ "Translation produces incorrect/garbage output"
+Ensure the `models/translator_onnx/` folder exists with the correct ONNX model files:
+```
+models/translator_onnx/
+  ├── encoder_model.onnx
+  ├── decoder_model.onnx
+  ├── decoder_with_past_model.onnx
+  └── tokenizer files
+```
+If the folder is missing, the system automatically falls back to the HuggingFace `Helsinki-NLP/opus-mt-mul-en` pipeline (requires internet on first run).
 
 ---
 
