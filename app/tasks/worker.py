@@ -5,6 +5,7 @@ Celery task execution pipeline for local model inference.
 import logging
 import os
 import sys
+import re
 from pathlib import Path
 from typing import Optional
 import threading
@@ -53,10 +54,92 @@ def get_onnx_services():
                 _translator_onnx = TranslationOnnxService()
     return _bert_onnx, _translator_onnx
 
+
+# ---------------------------------------------------------------------------
+# Unicode Script Auto-Detector
+# Maps Unicode character ranges to BCP-47 language codes so that
+# "Auto-Detect" submissions are automatically translated rather than
+# being passed raw to BERT (which was trained only on English text).
+# ---------------------------------------------------------------------------
+_SCRIPT_RANGES = [
+    (0x0C80, 0x0CFF, "kn"),   # Kannada
+    (0x0900, 0x097F, "hi"),   # Devanagari  (Hindi / Marathi)
+    (0x0B80, 0x0BFF, "ta"),   # Tamil
+    (0x0C00, 0x0C7F, "te"),   # Telugu
+    (0x0D00, 0x0D7F, "ml"),   # Malayalam
+    (0x0980, 0x09FF, "bn"),   # Bengali
+    (0x0A80, 0x0AFF, "gu"),   # Gujarati
+    (0x0A00, 0x0A7F, "pa"),   # Gurmukhi (Punjabi)
+    (0x0D80, 0x0DFF, "si"),   # Sinhala
+    (0x0E00, 0x0E7F, "th"),   # Thai
+    (0x0600, 0x06FF, "ur"),   # Arabic / Urdu
+]
+
+def detect_script_language(text: str) -> Optional[str]:
+    """
+    Inspect the Unicode code points of each character in `text`.
+    Return the BCP-47 code for the first matching script range found,
+    or None if the text appears to be ASCII/Latin (English).
+    """
+    for ch in text:
+        cp = ord(ch)
+        for lo, hi, lang in _SCRIPT_RANGES:
+            if lo <= cp <= hi:
+                return lang
+    return None  # Treat as English / Latin script
+
+
+def safe_translate(translator_onnx: TranslationOnnxService, text: str, source_lang: str) -> str:
+    """
+    Two-tier translation fallback:
+      Tier 1 — ONNX quantized MarianMT (fast, offline)
+      Tier 2 — Pure HuggingFace AutoModelForSeq2SeqLM (slower, same model)
+    If both fail the original text is returned with a warning so that BERT
+    still runs (it will produce poor results on non-English text, but the
+    task will not crash).
+    """
+    # Tier 1: ONNX
+    try:
+        result = translator_onnx.translate(text, source_lang=source_lang)
+        if result and result.strip():
+            logger.info("Translation (ONNX) succeeded for lang=%s", source_lang)
+            return result
+    except Exception as exc_onnx:
+        logger.warning("ONNX translation failed (%s), falling back to HuggingFace pipeline.", exc_onnx)
+
+    # Tier 2: Pure HuggingFace AutoModel
+    try:
+        from src.services.translation import TranslationService
+        hf_translator = TranslationService()
+        result = hf_translator.translate(text, source_lang=source_lang)
+        if result and result.strip():
+            logger.info("Translation (HuggingFace fallback) succeeded for lang=%s", source_lang)
+            return result
+    except Exception as exc_hf:
+        logger.error(
+            "HuggingFace fallback translation also failed for lang=%s: %s",
+            source_lang, exc_hf
+        )
+
+    # Last resort: pass through untranslated (BERT will likely misclassify non-English)
+    logger.error(
+        "All translation tiers failed for lang=%s. Passing raw text to BERT — results may be inaccurate.",
+        source_lang
+    )
+    return text
+
 @celery_app.task(name="tasks.queue_text_analysis")
 def queue_text_analysis(patient_id: str, text: str, lang_hint: str) -> dict:
     """
     Celery task running offline translation and text classification.
+
+    Translation logic (in order of priority):
+      1. If the frontend sent an explicit language code (e.g. 'kn', 'hi') use it.
+      2. If the frontend sent 'auto' (default), inspect the Unicode script ranges
+         of the input text to auto-detect the language.  This prevents raw
+         Kannada / Hindi / Tamil script from reaching BERT unchanged.
+      3. If the text looks like Latin/English, skip translation.
+      4. Translation uses a two-tier fallback: ONNX → HuggingFace AutoModel.
     """
     logger.info("Initializing Celery Text Analysis task for patient: %s", patient_id)
     bert, translator = get_onnx_services()
@@ -64,19 +147,34 @@ def queue_text_analysis(patient_id: str, text: str, lang_hint: str) -> dict:
     # 1. Anonymize/De-identify input text
     cleaned_input = deidentify_text(text)
 
-    # 2. Local translation if native input is provided
+    # 2. Resolve effective language code
+    effective_lang = lang_hint  # may be 'auto', 'en', or a BCP-47 code
+    if lang_hint == "auto":
+        detected = detect_script_language(cleaned_input)
+        if detected:
+            effective_lang = detected
+            logger.info(
+                "Auto-detected non-Latin script — resolved language: %s", effective_lang
+            )
+        else:
+            effective_lang = "en"
+            logger.info("Auto-detect: Latin/ASCII text — treating as English, skipping translation.")
+
+    # 3. Translate if the text is not already in English
     processed_text = cleaned_input
-    if lang_hint and lang_hint != "en" and lang_hint != "auto":
-        logger.info("Translating input text from language: %s ...", lang_hint)
-        processed_text = translator.translate(cleaned_input, source_lang=lang_hint)
-    
-    # 3. Quantized ONNX BERT forward pass
+    if effective_lang and effective_lang not in ("en", "auto"):
+        logger.info("Translating input from language: %s ...", effective_lang)
+        processed_text = safe_translate(translator, cleaned_input, source_lang=effective_lang)
+        logger.info("Translated text: %r", processed_text[:120])
+
+    # 4. Quantized ONNX BERT forward pass
     logger.info("Executing quantized ONNX BERT inference...")
     label, probs = bert.predict(processed_text)
-    
+
     # Construct task response JSON
     return {
         "patient_id": patient_id,
+        "original_lang": effective_lang,
         "processed_text": processed_text,
         "prediction": label,
         "probabilities": [float(p) for p in probs],
