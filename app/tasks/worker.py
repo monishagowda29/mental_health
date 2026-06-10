@@ -21,6 +21,16 @@ from app.utils.anonymization import deidentify_text
 
 logger = logging.getLogger(__name__)
 
+import redis
+# Monkey-patch redis-py Connection class to force protocol=2 (RESP2) globally.
+# This bypasses the RESP3 HELLO handshake command which is unsupported by the host's Redis service.
+_orig_init = redis.Connection.__init__
+def _patched_init(self, *args, **kwargs):
+    kwargs['protocol'] = 2
+    kwargs['maint_notifications_config'] = None
+    _orig_init(self, *args, **kwargs)
+redis.Connection.__init__ = _patched_init
+
 # Redis Broker and backend configurations
 redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
 celery_app = Celery(
